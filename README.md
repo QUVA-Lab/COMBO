@@ -1,4 +1,4 @@
-# Combinatorial Bayesian optimization Learning Graph Decomposition (GRA)
+# Bayesian Optimization Learning Combinatorial Structure using Graph Products
 
 
 ## Set up
