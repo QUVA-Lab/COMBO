@@ -1,10 +1,6 @@
 import math
 
-import numpy as np
-import sampyl as smp
-
 import torch
-from torch.nn import Parameter
 from GraphDecompositionBO.graphGP.kernels.graphkernel import GraphKernel, log_lower_bnd, log_upper_bnd
 
 
