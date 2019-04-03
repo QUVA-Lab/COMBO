@@ -1,5 +1,6 @@
 import time
 import sys
+import copy
 import numpy as np
 
 import torch
@@ -46,23 +47,6 @@ def sort_partition(partition):
 	return sorted_partition
 
 
-def strong_product_of_adjacency(list_of_adjmats, partition):
-	'''
-
-	:param list_of_adjmats: list of tensors
-	:param ind_groups: list of list of inds
-	:return:
-	'''
-	sorted_partition = sort_partition(partition)
-	list_of_grouped_adjmats = []
-	for subset in sorted_partition:
-		grouped_adjmats = list_of_adjmats[subset[0]]
-		for i in range(1, len(subset)):
-			grouped_adjmats = kronecker(grouped_adjmats, list_of_adjmats[subset[i]])
-		list_of_grouped_adjmats.append(grouped_adjmats)
-	return list_of_grouped_adjmats
-
-
 def compute_unit_in_group(sorted_partition, categories):
 	'''
 	In order to convert between grouped variable and original ungrouped variable, units are necessary
@@ -80,11 +64,17 @@ def compute_unit_in_group(sorted_partition, categories):
 	return unit_in_group
 
 
+def compute_group_size(sorted_partition, categories):
+	complexity = sum([np.prod(categories[subset]) ** 3 for subset in sorted_partition])
+	max_size = max([np.prod(categories[subset]) for subset in sorted_partition])
+	return max_size
+
+
 def group_input(input_data, sorted_partition, unit_in_group):
 	'''
 
 	:param input_data: 2D torch.Tensor, size(0) : number of data, size(1) : number of original variables
-	:param sorted_partition: list of subsets, elements in a subset are ordered, subsets are ordered by their smallest elements
+	:param sorted_partition: list of subsets, elements in each subset are ordered, subsets are ordered by their smallest elements
 	:param unit_in_group: compute_unit_in_group(sorted_partition, categories)
 	:return: 2D torch.Tensor, size(0) : number of data, size(1) : number of grouped variables
 	'''
@@ -99,7 +89,7 @@ def ungroup_input(grouped_input, sorted_partition, unit_in_group):
 	'''
 
 	:param grouped_input: 2D torch.Tensor, size(0) : number of data, size(1) : number of grouped variables
-	:param sorted_partition: list of subsets, elements in a subset are ordered, subsets are ordered by their smallest elements
+	:param sorted_partition: list of subsets, elements in each subset are ordered, subsets are ordered by their smallest elements
 	:param unit_in_group: compute_unit_in_group(sorted_partition, categories)
 	:return: 2D torch.Tensor, size(0) : number of data, size(1) : number of original variables
 	'''
@@ -117,40 +107,121 @@ def ungroup_input(grouped_input, sorted_partition, unit_in_group):
 	return input_data
 
 
-def feasibility(input_data, output_data, log_amp, log_beta, categories, grouping):
+def strong_product(list_of_adjacency, beta, subset):
+	'''
+	Adjacency matrix of strong product of G1 with edge-weight beta1 and G2 with edge-weight beta2 is (beta1 x A1 + id) kron (beta2 x A2 + id) - id
+	https://pdfs.semanticscholar.org/c534/af029958ba0882c04e136ceec99cbcba508f.pdf
+	each subgraph has the same edge-weight within the graph
+	:param list_of_adjacency: list of 2D tensors or adjacency matrices
+	:param sorted_partition: list of subsets, elements in each subset are ordered, subsets are ordered by their smallest elements
+	:return:
+	'''
+	elm = subset[0]
+	grouped_adjacency_id_added = beta[elm] * list_of_adjacency[elm] + torch.diag(list_of_adjacency[elm].new_ones(list_of_adjacency[elm].size(0)))
+	for ind in range(1, len(subset)):
+		elm = subset[ind]
+		mat1 = grouped_adjacency_id_added
+		mat2 = beta[elm] * list_of_adjacency[elm] + torch.diag(list_of_adjacency[elm].new_ones(list_of_adjacency[elm].size(0)))
+		grouped_adjacency_id_added = kronecker(mat1, mat2)
+	return grouped_adjacency_id_added - torch.diag(grouped_adjacency_id_added.new_ones(grouped_adjacency_id_added.size(0)))
+
+
+def neighbor_partitions(sorted_partition, ind):
+	n_subsets = len(sorted_partition)
+	neighbors = []
+	for i in range(n_subsets):
+		if ind in sorted_partition[i]:
+			break
+	for s in range(n_subsets):
+		if ind in sorted_partition[s]:
+			neighbors.append(copy.deepcopy(sorted_partition))
+		else:
+			neighbor = copy.deepcopy(sorted_partition)
+			neighbor[i].remove(ind)
+			neighbor[s].append(ind)
+			if len(neighbor[i]) == 0:
+				neighbor.pop(i)
+			neighbors.append(sort_partition(neighbor))
+	return neighbors
+
+
+def sampling_partition(input_data, output_data, categories, list_of_adjacency, mean, log_amp, log_beta, log_noise_var, sorted_partition, ind):
 	"""
 
 	:param input_data:
 	:param output_data:
+	:param categories: list of the number of categories in each of K categorical variables
 	:param log_amp:
 	:param log_beta:
-	:param categories: list of the number of categories in each of K categorical variables
-	:param grouping: Partition of {1, ..., K}
+	:param sorted_partition: Partition of {1, ..., K}
 	:return:
 	"""
-	pass
+	# TODO : using beta and using log_beta are very different, consider slices coming from each method
+	candidate_partitions = neighbor_partitions(sorted_partition, ind)
+	eigen_decompositions = {}
+	model = GPRegression(kernel=None)
+	model.mean.const_mean.data = mean
+	model.likelihood.log_noise_var.data = log_noise_var
+	for candidate in candidate_partitions:
+		max_size = compute_group_size(sorted_partition=candidate, categories=categories)
+		if max_size > 2050: # 2^11
+			continue
+		unit_in_group = compute_unit_in_group(sorted_partition=candidate, categories=categories)
+		grouped_input_data = group_input(input_data=input_data, sorted_partition=candidate, unit_in_group=unit_in_group)
+		fourier_freq_list = []
+		fourier_basis_list = []
+		for subset in candidate:
+			try:
+				fourier_freq, fourier_basis = eigen_decompositions[tuple(subset)]
+			except KeyError:
+				adj_mat = strong_product(list_of_adjacency=list_of_adjacency, beta=torch.exp(log_beta), subset=subset)
+				deg_mat = torch.diag(torch.sum(adj_mat, dim=0))
+				laplacian = deg_mat - adj_mat
+				fourier_freq, fourier_basis = torch.symeig(laplacian, eigenvectors=True)
+				eigen_decompositions[tuple(subset)] = (fourier_freq, fourier_basis)
+			fourier_freq_list.append(fourier_freq)
+			fourier_basis_list.append(fourier_basis)
+		kernel = DiffusionKernel(fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list)
+		kernel.log_amp.data = log_amp
+		model.kernel = kernel
+		inference = Inference(train_data=(grouped_input_data, output_data), model=model)
+		ll = -inference.negative_log_likelihood(hyper=model.param_to_vec())
 
 
 if __name__ == '__main__':
-	n_vars = 10
-	n_data = 3
+	n_vars = 100
+	n_data = 100
 	categories = np.random.randint(2, 6, n_vars)
-	random_input_data = torch.zeros(n_data, n_vars)
-	for i in range(n_vars):
-		random_input_data[:, i] = torch.randint(0, categories[i], (n_data,))
+	list_of_adjacency = []
+	for d in range(n_vars):
+		adjacency = torch.ones(categories[d], categories[d])
+		adjacency[range(categories[d]), range(categories[d])] = 0
+		list_of_adjacency.append(adjacency)
+	input_data = torch.zeros(n_data, n_vars).long()
+	output_data = torch.randn(n_data, 1)
+	for a in range(n_vars):
+		input_data[:, a] = torch.randint(0, categories[a], (n_data,))
 	inds = range(n_vars)
 	np.random.shuffle(inds)
-	i = 0
+	b = 0
 	random_partition = []
-	while i < n_vars:
+	while b < n_vars:
 		subset_size = np.random.poisson(2) + 1
-		random_partition.append(inds[i:i+subset_size])
-		i += subset_size
-	print(random_partition)
+		random_partition.append(inds[b:b+subset_size])
+		b += subset_size
 	sorted_partition = sort_partition(random_partition)
 	unit_in_group = compute_unit_in_group(sorted_partition, categories)
+	grouped_input = group_input(input_data, sorted_partition, unit_in_group)
+	input_data_re = ungroup_input(grouped_input, sorted_partition, unit_in_group)
+	mean = torch.mean(output_data, dim=0)
+	amp = torch.std(output_data, dim=0)
+	log_amp = torch.log(amp)
+	log_noise_var = torch.log(amp / 1000.)
+	log_beta = torch.randn(n_vars)
+	start_time = time.time()
+	print('%d variables' % n_vars)
 	print(sorted_partition)
-	print(unit_in_group)
-	grouped_input = group_input(random_input_data, sorted_partition, unit_in_group)
-	random_input_data_re = ungroup_input(grouped_input, sorted_partition, unit_in_group)
-	print(torch.sum((random_input_data - random_input_data_re) ** 2))
+	for e in range(n_vars):
+		print(e)
+		sampling_partition(input_data, output_data, categories, list_of_adjacency, mean, log_amp, log_beta, log_noise_var, sorted_partition, ind=e)
+	print(time.time() - start_time)

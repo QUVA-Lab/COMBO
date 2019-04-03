@@ -35,8 +35,7 @@ class GraphKernel(GPModule):
 		return 1
 
 	def param_to_vec(self):
-		flat_param_list = [self.log_amp.data.clone()]
-		return torch.cat(flat_param_list)
+		return self.log_amp.data.clone()
 
 	def vec_to_param(self, vec):
 		assert vec.numel() == 1
