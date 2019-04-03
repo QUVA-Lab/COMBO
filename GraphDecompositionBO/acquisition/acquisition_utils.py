@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.multiprocessing as multiprocessing
 
-from CombinatorialBO.acquisition.acquisition_functions import expected_improvement
+from GraphDecompositionBO.acquisition.acquisition_functions import expected_improvement
 
 N_AVAILABLE_CORE = 8 # When there is this many available cpu cores new optimization is started
 N_RANDOM_VERTICES = 20000

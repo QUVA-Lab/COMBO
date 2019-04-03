@@ -5,19 +5,19 @@ import argparse
 import torch
 import torch.multiprocessing as multiprocessing
 
-from CombinatorialBO.graphGP.kernels.diffusionkernel import DiffusionKernel
-from CombinatorialBO.graphGP.models.gp_regression import GPRegression
-from CombinatorialBO.graphGP.inference.inference import Inference
+from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
+from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
+from GraphDecompositionBO.graphGP.inference.inference import Inference
 
-from CombinatorialBO.acquisition.acquisition_utils import deepcopy_inference, next_evaluation
-from CombinatorialBO.acquisition.acquisition_functions import expected_improvement
+from GraphDecompositionBO.acquisition.acquisition_utils import deepcopy_inference, next_evaluation
+from GraphDecompositionBO.acquisition.acquisition_functions import expected_improvement
 
-from CombinatorialBO.experiment_utils import experiment_directory, model_data_filenames, load_model_data, displaying_and_logging
+from GraphDecompositionBO.experiment_utils import experiment_directory, model_data_filenames, load_model_data, displaying_and_logging
 
-from CombinatorialBO.test_functions.experiment_configuration import generate_random_seed_pair_ising, generate_random_seed_pair_contamination, generate_random_seed_aerostruct, generate_random_seed_pair_travelplan, generate_random_seed_pestcontrol, generate_random_seed_pair_centroid
-from CombinatorialBO.test_functions.discretized_continuous import Branin, Hartmann6
-from CombinatorialBO.test_functions.binary_categorical import Ising1, Ising2, Contamination1, AeroStruct1, AeroStruct2, AeroStruct3
-from CombinatorialBO.test_functions.multiple_categorical import PestControl, Centroid
+from GraphDecompositionBO.test_functions.experiment_configuration import generate_random_seed_pair_ising, generate_random_seed_pair_contamination, generate_random_seed_aerostruct, generate_random_seed_pair_travelplan, generate_random_seed_pestcontrol, generate_random_seed_pair_centroid
+from GraphDecompositionBO.test_functions.discretized_continuous import Branin, Hartmann6
+from GraphDecompositionBO.test_functions.binary_categorical import Ising1, Ising2, Contamination1, AeroStruct1, AeroStruct2, AeroStruct3
+from GraphDecompositionBO.test_functions.multiple_categorical import PestControl, Centroid
 
 
 def GRASB(objective=None, n_eval=200, path=None, parallel=False, **kwargs):

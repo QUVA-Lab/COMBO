@@ -6,9 +6,9 @@ import scipy.io as sio
 import matplotlib.pyplot as plt
 
 
-PEST_COMBO_DATA_DIR = '/home/coh1/Experiments/CombinatorialBO/PestControl_COMBO'
-CENTROID_COMBO_DATA_DIR = '/home/coh1/Experiments/CombinatorialBO/Centroid_COMBO'
-BRANIN_COMBO_DATA_DIR = '/home/coh1/Experiments/CombinatorialBO/Branin_COMBO'
+PEST_COMBO_DATA_DIR = '/home/coh1/Experiments/GraphDecompositionBO/PestControl_COMBO'
+CENTROID_COMBO_DATA_DIR = '/home/coh1/Experiments/GraphDecompositionBO/Centroid_COMBO'
+BRANIN_COMBO_DATA_DIR = '/home/coh1/Experiments/GraphDecompositionBO/Branin_COMBO'
 
 
 def name_in_plot(name):
@@ -40,7 +40,7 @@ def assign_color(model_name):
 	return np.random.RandomState(sum([ord(elm) + 1 for elm in model_name]) + 2).rand(3)
 
 
-def baseline_data(identifier, data_dir='/home/coh1/Experiments/CombinatorialBO'):
+def baseline_data(identifier, data_dir='/home/coh1/Experiments/GraphDecompositionBO'):
 	mean_std_dict = {}
 	for elm in os.listdir(data_dir):
 		if identifier == elm.split('_')[0]:
@@ -136,7 +136,7 @@ def plotting_mean_std(mean_std_dict, lamda, title_str=''):
 
 
 if __name__ == '__main__':
-	# f = open('/home/coh1/Experiments/CombinatorialBO/pestcontrol_baseline_result_simulatedannealing.pkl')
+	# f = open('/home/coh1/Experiments/GraphDecompositionBO/pestcontrol_baseline_result_simulatedannealing.pkl')
 	# data = pickle.load(f)
 	# f.close()
 	# print(data)

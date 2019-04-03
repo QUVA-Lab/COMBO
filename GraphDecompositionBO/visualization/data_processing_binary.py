@@ -4,12 +4,12 @@ import scipy.io as sio
 import matplotlib.pyplot as plt
 
 
-CONTAMINATION_PYTHON_MAT_DIR = '/home/coh1/Experiments/CombinatorialBO/Contamination_Others_python_friendly_mat_files'
-CONTAMINATION_GRASP_DATA_DIR = '/home/coh1/Experiments/CombinatorialBO/Contamination_COMBO'
-ISING_PYTHON_MAT_DIR = '/home/coh1/Experiments/CombinatorialBO/Ising_Others_python_friendly_mat_files'
-ISING_GRASP_DATA_DIR = '/home/coh1/Experiments/CombinatorialBO/Ising_COMBO'
-AERO_PYTHON_MAT_DIR = '/home/coh1/Experiments/CombinatorialBO/Aero_Others_python_friendly_mat_files'
-AERO_GRASP_DATA_DIR = '/home/coh1/Experiments/CombinatorialBO/Aero_COMBO'
+CONTAMINATION_PYTHON_MAT_DIR = '/home/coh1/Experiments/GraphDecompositionBO/Contamination_Others_python_friendly_mat_files'
+CONTAMINATION_GRASP_DATA_DIR = '/home/coh1/Experiments/GraphDecompositionBO/Contamination_COMBO'
+ISING_PYTHON_MAT_DIR = '/home/coh1/Experiments/GraphDecompositionBO/Ising_Others_python_friendly_mat_files'
+ISING_GRASP_DATA_DIR = '/home/coh1/Experiments/GraphDecompositionBO/Ising_COMBO'
+AERO_PYTHON_MAT_DIR = '/home/coh1/Experiments/GraphDecompositionBO/Aero_Others_python_friendly_mat_files'
+AERO_GRASP_DATA_DIR = '/home/coh1/Experiments/GraphDecompositionBO/Aero_COMBO'
 
 
 def name_in_plot(name):

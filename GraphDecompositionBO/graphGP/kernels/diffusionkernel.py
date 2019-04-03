@@ -5,7 +5,7 @@ import sampyl as smp
 
 import torch
 from torch.nn import Parameter
-from CombinatorialBO.graphGP.kernels.graphkernel import GraphKernel, log_lower_bnd, log_upper_bnd
+from GraphDecompositionBO.graphGP.kernels.graphkernel import GraphKernel, log_lower_bnd, log_upper_bnd
 
 
 class DiffusionKernel(GraphKernel):

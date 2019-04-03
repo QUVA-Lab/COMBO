@@ -2,7 +2,7 @@ import numpy as np
 
 import torch
 
-from CombinatorialBO.test_functions.binary_categorical import Ising1, _contamination
+from GraphDecompositionBO.test_functions.binary_categorical import Ising1, _contamination
 
 
 def interaction_matlab2python(bocs_representation):

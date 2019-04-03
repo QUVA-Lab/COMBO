@@ -1,5 +1,5 @@
 import torch
-from CombinatorialBO.graphGP.modules.gp_modules import GPModule
+from GraphDecompositionBO.graphGP.modules.gp_modules import GPModule
 
 
 class GP(GPModule):

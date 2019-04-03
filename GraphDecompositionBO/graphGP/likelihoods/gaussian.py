@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.nn.parameter import Parameter
 
-from CombinatorialBO.graphGP.likelihoods.likelihood import Likelihood, log_lower_bnd
+from GraphDecompositionBO.graphGP.likelihoods.likelihood import Likelihood, log_lower_bnd
 
 
 class GaussianLikelihood(Likelihood):

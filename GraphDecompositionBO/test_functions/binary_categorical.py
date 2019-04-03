@@ -3,10 +3,10 @@ import itertools
 import numpy as np
 
 import torch
-from CombinatorialBO.test_functions.aero_struct.aerostruct_lin_model import kl_decoupled_models
-from CombinatorialBO.test_functions.experiment_configuration import ISING_GRID_H, ISING_GRID_W
-from CombinatorialBO.test_functions.experiment_configuration import ISING_N_EDGES, CONTAMINATION_N_STAGES, AEROSTRUCTURAL_N_COUPLINGS
-from CombinatorialBO.test_functions.experiment_configuration import sample_init_points, generate_ising_interaction, generate_contamination_dynamics
+from GraphDecompositionBO.test_functions.aero_struct.aerostruct_lin_model import kl_decoupled_models
+from GraphDecompositionBO.test_functions.experiment_configuration import ISING_GRID_H, ISING_GRID_W
+from GraphDecompositionBO.test_functions.experiment_configuration import ISING_N_EDGES, CONTAMINATION_N_STAGES, AEROSTRUCTURAL_N_COUPLINGS
+from GraphDecompositionBO.test_functions.experiment_configuration import sample_init_points, generate_ising_interaction, generate_contamination_dynamics
 
 
 AERO_STRUCT_EVAL_UPPER_LIMIT = 1000
@@ -356,7 +356,7 @@ class AeroStruct3(object):
 
 if __name__ == '__main__':
     pass
-    # from CombinatorialBO.test_functions.experiment_configuration import generate_random_seed_aerostruct, generate_random_seed_pair_ising, generate_random_seed_pair_contamination, generate_ising_interaction
+    # from GraphDecompositionBO.test_functions.experiment_configuration import generate_random_seed_aerostruct, generate_random_seed_pair_ising, generate_random_seed_pair_contamination, generate_ising_interaction
 
     # random_seed_pairs = generate_random_seed_pair_ising()
     # lamda = 0.00

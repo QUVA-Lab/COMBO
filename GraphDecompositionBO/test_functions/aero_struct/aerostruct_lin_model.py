@@ -15,20 +15,20 @@ import pdb
 from openmdao.api import IndepVarComp, Problem, Group, ScipyOptimizer, Newton, ScipyGMRES, LinearGaussSeidel, NLGaussSeidel, SqliteRecorder, profile
 from openmdao.devtools.partition_tree_n2 import view_tree
 
-from CombinatorialBO.test_functions.aero_struct.geometry import GeometryMesh, Bspline, gen_crm_mesh, gen_mesh, get_inds
-from CombinatorialBO.test_functions.aero_struct.transfer import TransferDisplacements, TransferLoads
-from CombinatorialBO.test_functions.aero_struct.vlm import VLMStates, VLMFunctionals
-from CombinatorialBO.test_functions.aero_struct.spatialbeam import SpatialBeamStates, SpatialBeamFunctionals, radii
-from CombinatorialBO.test_functions.aero_struct.materials import MaterialsTube
-from CombinatorialBO.test_functions.aero_struct.functionals import FunctionalBreguetRange, FunctionalEquilibrium
+from GraphDecompositionBO.test_functions.aero_struct.geometry import GeometryMesh, Bspline, gen_crm_mesh, gen_mesh, get_inds
+from GraphDecompositionBO.test_functions.aero_struct.transfer import TransferDisplacements, TransferLoads
+from GraphDecompositionBO.test_functions.aero_struct.vlm import VLMStates, VLMFunctionals
+from GraphDecompositionBO.test_functions.aero_struct.spatialbeam import SpatialBeamStates, SpatialBeamFunctionals, radii
+from GraphDecompositionBO.test_functions.aero_struct.materials import MaterialsTube
+from GraphDecompositionBO.test_functions.aero_struct.functionals import FunctionalBreguetRange, FunctionalEquilibrium
 
-from CombinatorialBO.test_functions.aero_struct.gs_newton import HybridGSNewton
-from CombinatorialBO.test_functions.aero_struct.b_spline import get_bspline_mtx
-from CombinatorialBO.test_functions.aero_struct.compute_derivs import comp_partial_derivatives
+from GraphDecompositionBO.test_functions.aero_struct.gs_newton import HybridGSNewton
+from GraphDecompositionBO.test_functions.aero_struct.b_spline import get_bspline_mtx
+from GraphDecompositionBO.test_functions.aero_struct.compute_derivs import comp_partial_derivatives
 
 import sys
 import pickle
-from CombinatorialBO.test_functions.aero_struct.velcoupling import velcoupling
+from GraphDecompositionBO.test_functions.aero_struct.velcoupling import velcoupling
 import copy
 import os.path
 

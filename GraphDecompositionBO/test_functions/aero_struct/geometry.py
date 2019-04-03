@@ -6,8 +6,8 @@ from numpy import cos, sin, tan
 
 from openmdao.api import Component
 
-from CombinatorialBO.test_functions.aero_struct.b_spline import get_bspline_mtx
-from CombinatorialBO.test_functions.aero_struct.crm_data import crm_base_mesh
+from GraphDecompositionBO.test_functions.aero_struct.b_spline import get_bspline_mtx
+from GraphDecompositionBO.test_functions.aero_struct.crm_data import crm_base_mesh
 
 
 def get_inds(aero_ind, fem_ind):

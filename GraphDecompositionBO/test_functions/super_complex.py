@@ -4,8 +4,8 @@ import numpy as np
 
 import torch
 
-from CombinatorialBO.test_functions.experiment_configuration import sample_init_points
-from CombinatorialBO.test_functions.travel_plan.generate_tpp import generate_travel_plan_problem, number_of_edges
+from GraphDecompositionBO.test_functions.experiment_configuration import sample_init_points
+from GraphDecompositionBO.test_functions.travel_plan.generate_tpp import generate_travel_plan_problem, number_of_edges
 
 
 TRAVEL_N_CITIES = 6

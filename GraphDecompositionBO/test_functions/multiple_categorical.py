@@ -6,8 +6,8 @@ import numpy as np
 
 import torch
 
-from CombinatorialBO.test_functions.experiment_configuration import sample_init_points, generate_ising_interaction, generate_random_seed_pair_centroid
-from CombinatorialBO.test_functions.binary_categorical import spin_covariance, partition, ising_dense
+from GraphDecompositionBO.test_functions.experiment_configuration import sample_init_points, generate_ising_interaction, generate_random_seed_pair_centroid
+from GraphDecompositionBO.test_functions.binary_categorical import spin_covariance, partition, ising_dense
 
 PESTCONTROL_N_CHOICE = 5
 PESTCONTROL_N_STAGES = 25

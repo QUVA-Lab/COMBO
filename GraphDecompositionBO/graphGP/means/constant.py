@@ -1,7 +1,7 @@
 import torch
 from torch.nn.parameter import Parameter
 
-from CombinatorialBO.graphGP.means.mean import Mean
+from GraphDecompositionBO.graphGP.means.mean import Mean
 
 
 class ConstantMean(Mean):

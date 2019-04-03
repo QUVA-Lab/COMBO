@@ -1,6 +1,6 @@
-from CombinatorialBO.graphGP.likelihoods.gaussian import GaussianLikelihood
-from CombinatorialBO.graphGP.means.constant import ConstantMean
-from CombinatorialBO.graphGP.models.gp import GP
+from GraphDecompositionBO.graphGP.likelihoods.gaussian import GaussianLikelihood
+from GraphDecompositionBO.graphGP.means.constant import ConstantMean
+from GraphDecompositionBO.graphGP.models.gp import GP
 
 
 class GPRegression(GP):
