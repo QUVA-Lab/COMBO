@@ -30,9 +30,9 @@ class DiffusionKernel(GraphKernel):
 
 		full_gram = 1
 		for i in range(self.n_factors):
-			subvec1 = self.fourier_basis[i][x1[:, i]]
-			subvec2 = self.fourier_basis[i][x2[:, i]]
-			freq_transform = torch.exp(-self.fourier_coef[i])
+			subvec1 = self.fourier_basis_list[i][x1[:, i]]
+			subvec2 = self.fourier_basis_list[i][x2[:, i]]
+			freq_transform = torch.exp(-self.fourier_freq_list[i])
 			if diagonal:
 				factor_gram = torch.sum(subvec1 * freq_transform.unsqueeze(0) * subvec2, dim=1, keepdim=True)
 			else:

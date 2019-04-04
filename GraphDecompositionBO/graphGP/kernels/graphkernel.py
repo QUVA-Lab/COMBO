@@ -7,14 +7,14 @@ from GraphDecompositionBO.graphGP.modules.gp_modules import GPModule, log_lower_
 
 class GraphKernel(GPModule):
 
-	def __init__(self, fourier_coef_list, fourier_basis_list):
+	def __init__(self, fourier_freq_list, fourier_basis_list):
 		super(GraphKernel, self).__init__()
 		self.log_amp = Parameter(torch.FloatTensor(1))
 		self.amp_scale = 1.0
-		self.n_factors = len(fourier_coef_list)
-		self.fourier_coef = fourier_coef_list
-		self.fourier_basis = fourier_basis_list
-		self.n_vertices = torch.Tensor([elm.numel() for elm in self.fourier_coef])
+		self.n_factors = len(fourier_freq_list)
+		self.fourier_freq_list = fourier_freq_list
+		self.fourier_basis_list = fourier_basis_list
+		self.n_vertices = torch.Tensor([elm.numel() for elm in self.fourier_freq_list])
 
 	def reset_parameters(self):
 		self.log_amp.data.normal_()
