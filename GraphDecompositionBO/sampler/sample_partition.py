@@ -6,7 +6,7 @@ import torch
 from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
 from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
 from GraphDecompositionBO.graphGP.inference.inference import Inference
-from GraphDecompositionBO.sampler.grouping_utils import sort_partition, compute_unit_in_group, compute_group_size, group_input, ungroup_input, strong_product, neighbor_partitions
+from GraphDecompositionBO.sampler.tool_partition import sort_partition, compute_unit_in_group, compute_group_size, group_input, ungroup_input, strong_product, neighbor_partitions
 
 
 GRAPH_SIZE_LIMIT = 1024 + 2
