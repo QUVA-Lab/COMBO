@@ -1,34 +1,28 @@
-import time
 import numpy as np
 
 import torch
 
-from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
-from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
 from GraphDecompositionBO.graphGP.inference.inference import Inference
 
 
-from GraphDecompositionBO.sampler.tool_partition import sort_partition, compute_unit_in_group, group_input, ungroup_input, strong_product, kronecker
+from GraphDecompositionBO.sampler.tool_partition import strong_product, kronecker
 from GraphDecompositionBO.sampler.tool_slice_sampling import univariate_slice_sampling, edgeweight_log_prior
 
 
-def slice_edgeweight(grouped_input_data, output_data, list_of_adjacency, mean, log_amp, log_beta, log_noise_var,
+def slice_edgeweight(model, grouped_input_data, output_data, list_of_adjacency, log_beta,
                      sorted_partition, fourier_freq_list, fourier_basis_list, ind):
     '''
     Slice sampling edgeweight
+    :param model:
     :param grouped_input_data:
     :param output_data:
     :param categories:
     :param list_of_adjacency:
-    :param mean:
-    :param log_amp:
     :param log_beta:
-    :param log_noise_var:
     :param sorted_partition:
     :param fourier_freq_list:
     :param fourier_basis_list:
     :param ind:
-    :param freq_basis:
     :return:
     '''
     updated_subset_ind = [(ind in subset) for subset in sorted_partition].index(True)
@@ -53,12 +47,8 @@ def slice_edgeweight(grouped_input_data, output_data, list_of_adjacency, mean, l
         suffix_id_added = None
     id_for_updated_adj_mat = torch.diag(list_of_adjacency[ind].new_ones(list_of_adjacency[ind].size(0)))
 
-    kernel = DiffusionKernel(fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list)
-    kernel.log_amp.data = log_amp
-    model = GPRegression(kernel=kernel)
-    model.mean.const_mean.data = mean
-    model.likelihood.log_noise_var.data = log_noise_var
-
+    model.kernel.fourier_freq_list = fourier_freq_list
+    model.kernel.fourier_basis_list = fourier_basis_list
     inference = Inference(train_data=(grouped_input_data, output_data), model=model)
 
     # numerical_buffer is added for numerical stability in eigendecomposition and subtracted later
@@ -75,18 +65,23 @@ def slice_edgeweight(grouped_input_data, output_data, list_of_adjacency, mean, l
         # D(id_added) - A(id_added) = D(original) - A(original)
         laplacian = torch.diag(torch.sum(adj_id_added, dim=0) + numerical_buffer) - adj_id_added
         fourier_freq_buffer, fourier_basis = torch.symeig(laplacian, eigenvectors=True)
-        kernel.fourier_freq_list[updated_subset_ind] = (fourier_freq_buffer - numerical_buffer).clamp(min=0)
-        kernel.fourier_basis_list[updated_subset_ind] = fourier_basis
+        model.kernel.fourier_freq_list[updated_subset_ind] = (fourier_freq_buffer - numerical_buffer).clamp(min=0)
+        model.kernel.fourier_basis_list[updated_subset_ind] = fourier_basis
         return edgeweight_log_prior(log_beta_ind) - inference.negative_log_likelihood(hyper=model.param_to_vec())
 
     x0 = log_beta[ind]
     x1 = univariate_slice_sampling(logp, x0)
     log_beta[ind] = x1
-    return log_beta, kernel.fourier_freq_list, kernel.fourier_basis_list
+    return log_beta, model.kernel.fourier_freq_list, model.kernel.fourier_basis_list
 
 
 if __name__ == '__main__':
+    pass
     import progressbar
+    import time
+    from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
+    from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
+    from GraphDecompositionBO.sampler.tool_partition import sort_partition, compute_unit_in_group, group_input, ungroup_input
     n_vars = 50
     n_data = 60
     categories = np.random.randint(2, 3, n_vars)
@@ -111,11 +106,12 @@ if __name__ == '__main__':
     unit_in_group = compute_unit_in_group(sorted_partition, categories)
     grouped_input_data = group_input(input_data, sorted_partition, unit_in_group)
     input_data_re = ungroup_input(grouped_input_data, sorted_partition, unit_in_group)
-    mean = torch.mean(output_data, dim=0)
     amp = torch.std(output_data, dim=0)
-    log_amp = torch.log(amp)
-    log_noise_var = torch.log(amp / 1000.)
-    log_beta = torch.zeros(n_vars)
+    log_beta = torch.randn(n_vars)
+    model = GPRegression(kernel=DiffusionKernel(fourier_freq_list=[], fourier_basis_list=[]))
+    model.kernel.log_amp.data = torch.log(amp)
+    model.mean.const_mean.data = torch.mean(output_data, dim=0)
+    model.likelihood.log_noise_var.data = torch.log(amp / 1000.)
 
     start_time = time.time()
     fourier_freq_list = []
@@ -131,11 +127,10 @@ if __name__ == '__main__':
 
     start_time = time.time()
     print('%d variables' % n_vars)
-    print(len(sorted_partition))
-    print(sorted([len(elm) for elm in sorted_partition]))
+    print(log_beta)
     bar = progressbar.ProgressBar(max_value=n_vars)
     for e in range(n_vars):
         bar.update(e)
-        log_beta, fourier_freq_list, fourier_basis_list = slice_edgeweight(grouped_input_data, output_data, list_of_adjacency, mean, log_amp, log_beta, log_noise_var, sorted_partition, fourier_freq_list, fourier_basis_list, ind=e)
+        log_beta, fourier_freq_list, fourier_basis_list = slice_edgeweight(model, grouped_input_data, output_data, list_of_adjacency, log_beta, sorted_partition, fourier_freq_list, fourier_basis_list, ind=e)
     print(time.time() - start_time)
-    print(sorted([len(elm) for elm in sorted_partition]))
+    print(log_beta)

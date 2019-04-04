@@ -1,12 +1,9 @@
-import time
 import numpy as np
 
 import torch
 
-from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
-from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
 from GraphDecompositionBO.graphGP.inference.inference import Inference
-from GraphDecompositionBO.sampler.tool_partition import sort_partition, compute_unit_in_group, compute_group_size, group_input, ungroup_input, strong_product, neighbor_partitions
+from GraphDecompositionBO.sampler.tool_partition import compute_unit_in_group, compute_group_size, group_input, strong_product, neighbor_partitions
 
 
 GRAPH_SIZE_LIMIT = 1024 + 2
@@ -27,22 +24,22 @@ def partition_log_prior(sorted_partition, categories):
 		return np.log(np.sum(-prob_mass * np.log(prob_mass)))
 
 
-def gibbs_partition(input_data, output_data, categories, list_of_adjacency, mean, log_amp, log_beta, log_noise_var, sorted_partition, fourier_freq_list, fourier_basis_list, ind):
+def gibbs_partition(model, input_data, output_data, categories, list_of_adjacency, log_beta,
+					sorted_partition, fourier_freq_list, fourier_basis_list, ind):
 	"""
 	Gibbs sampling from a given partition by relocating ind
+	:param model:
 	:param input_data:
 	:param output_data:
 	:param categories: list of the number of categories in each of K categorical variables
-	:param log_amp:
+	:param list_of_adjacency:
 	:param log_beta:
 	:param sorted_partition: Partition of {1, ..., K}
 	:param fourier_freq_list: frequencies for subsets in sorted_partition
 	:param fourier_basis_list: basis for subsets in sorted_partition
 	:param ind: the index of the variable to be relocated in the sorted_partition
-	:param freq_basis:
 	:return:
 	"""
-	# TODO : using beta and using log_beta are very different, consider slices for each method
 	candidate_sorted_partitions = neighbor_partitions(sorted_partition, ind)
 	unnormalized_log_posterior = []
 	# TODO : eigen_decompositions itself can be given if all betas are sampled first and all partitions are sampled afterward
@@ -52,9 +49,6 @@ def gibbs_partition(input_data, output_data, categories, list_of_adjacency, mean
 	eigen_decompositions = {}
 	for subset, fourier_freq, fourier_basis in zip(sorted_partition, fourier_freq_list, fourier_basis_list):
 		eigen_decompositions[tuple(subset)] = (fourier_freq, fourier_basis)
-	model = GPRegression(kernel=None)
-	model.mean.const_mean.data = mean
-	model.likelihood.log_noise_var.data = log_noise_var
 	inference = Inference(train_data=(None, output_data), model=model)
 	for cand_sorted_partition in candidate_sorted_partitions:
 		log_prior = partition_log_prior(sorted_partition=cand_sorted_partition, categories=categories)
@@ -77,9 +71,8 @@ def gibbs_partition(input_data, output_data, categories, list_of_adjacency, mean
 				fourier_freq_list.append(fourier_freq)
 				fourier_basis_list.append(fourier_basis)
 			inference.train_x = grouped_input_data
-			kernel = DiffusionKernel(fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list)
-			kernel.log_amp.data = log_amp
-			model.kernel = kernel
+			model.kernel.fourier_freq_list = fourier_freq_list
+			model.kernel.fourier_basis_list = fourier_basis_list
 			ll = -inference.negative_log_likelihood(hyper=model.param_to_vec())
 			unnormalized_log_posterior.append(log_prior + ll)
 	# Gumbel Max trick : No need to calculate the normalizing constant for multinomial random variables
@@ -97,7 +90,12 @@ def gibbs_partition(input_data, output_data, categories, list_of_adjacency, mean
 
 
 if __name__ == '__main__':
+	pass
 	import progressbar
+	import time
+	from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
+	from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
+	from GraphDecompositionBO.sampler.tool_partition import sort_partition, ungroup_input
 	n_vars = 50
 	n_data = 60
 	categories = np.random.randint(2, 3, n_vars)
@@ -122,11 +120,12 @@ if __name__ == '__main__':
 	unit_in_group = compute_unit_in_group(sorted_partition, categories)
 	grouped_input = group_input(input_data, sorted_partition, unit_in_group)
 	input_data_re = ungroup_input(grouped_input, sorted_partition, unit_in_group)
-	mean = torch.mean(output_data, dim=0)
 	amp = torch.std(output_data, dim=0)
-	log_amp = torch.log(amp)
-	log_noise_var = torch.log(amp / 1000.)
 	log_beta = torch.randn(n_vars)
+	model = GPRegression(kernel=DiffusionKernel(fourier_freq_list=[], fourier_basis_list=[]))
+	model.kernel.log_amp.data = torch.log(amp)
+	model.mean.const_mean.data = torch.mean(output_data, dim=0)
+	model.likelihood.log_noise_var.data = torch.log(amp / 1000.)
 
 	start_time = time.time()
 	fourier_freq_list = []
@@ -147,6 +146,6 @@ if __name__ == '__main__':
 	bar = progressbar.ProgressBar(max_value=n_vars)
 	for e in range(n_vars):
 		bar.update(e)
-		sorted_partition, fourier_freq_list, fourier_basis_list = gibbs_partition(input_data, output_data, categories, list_of_adjacency, mean, log_amp, log_beta, log_noise_var, sorted_partition, fourier_freq_list, fourier_basis_list, ind=e, freq_basis=True)
+		sorted_partition, fourier_freq_list, fourier_basis_list = gibbs_partition(model, input_data, output_data, categories, list_of_adjacency, log_beta, sorted_partition, fourier_freq_list, fourier_basis_list, ind=e)
 	print(time.time() - start_time)
 	print(sorted([len(elm) for elm in sorted_partition]))

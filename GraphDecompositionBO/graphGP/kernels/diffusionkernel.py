@@ -29,7 +29,7 @@ class DiffusionKernel(GraphKernel):
 				stabilizer = torch.diag(1e-6 * x1.new_ones(x1.size(0), dtype=torch.float32))
 
 		full_gram = 1
-		for i in range(self.n_factors):
+		for i in range(len(self.fourier_freq_list)):
 			subvec1 = self.fourier_basis_list[i][x1[:, i]]
 			subvec2 = self.fourier_basis_list[i][x2[:, i]]
 			freq_transform = torch.exp(-self.fourier_freq_list[i])
