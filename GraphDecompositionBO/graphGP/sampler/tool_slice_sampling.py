@@ -2,7 +2,7 @@ import time
 import numpy as np
 
 
-from GraphDecompositionBO.sampler.tool_partition import sort_partition, compute_unit_in_group, group_input, ungroup_input, strong_product
+from GraphDecompositionBO.graphGP.sampler.tool_partition import sort_partition, compute_unit_in_group, group_input, ungroup_input, strong_product
 
 
 def univariate_slice_sampling(logp, x0):

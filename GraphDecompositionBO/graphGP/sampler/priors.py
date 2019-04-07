@@ -2,7 +2,7 @@ import numpy as np
 
 import torch
 
-from GraphDecompositionBO.sampler.tool_partition import compute_group_size
+from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_group_size
 
 # For numerical stability in exponential
 LOG_LOWER_BND = -12.0

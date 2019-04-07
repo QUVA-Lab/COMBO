@@ -3,8 +3,8 @@ import numpy as np
 import torch
 
 from GraphDecompositionBO.graphGP.inference.inference import Inference
-from GraphDecompositionBO.sampler.tool_partition import compute_unit_in_group, group_input, strong_product, neighbor_partitions
-from GraphDecompositionBO.sampler.priors import log_prior_partition
+from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_unit_in_group, group_input, strong_product, neighbor_partitions
+from GraphDecompositionBO.graphGP.sampler.priors import log_prior_partition
 
 
 def gibbs_partition(model, input_data, output_data, categories, list_of_adjacency, log_beta,

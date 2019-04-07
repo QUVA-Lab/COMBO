@@ -3,20 +3,19 @@ import numpy as np
 import torch
 
 from GraphDecompositionBO.graphGP.inference.inference import Inference
+from GraphDecompositionBO.graphGP.sampler.tool_partition import strong_product, kronecker
+from GraphDecompositionBO.graphGP.sampler.tool_slice_sampling import univariate_slice_sampling
+from GraphDecompositionBO.graphGP.sampler.priors import log_prior_edgeweight
+from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_unit_in_group, group_input
 
 
-from GraphDecompositionBO.sampler.tool_partition import strong_product, kronecker
-from GraphDecompositionBO.sampler.tool_slice_sampling import univariate_slice_sampling
-from GraphDecompositionBO.sampler.priors import log_prior_edgeweight
-
-
-def slice_edgeweight(model, grouped_input_data, output_data, list_of_adjacency, log_beta,
+def slice_edgeweight(model, input_data, output_data, list_of_adjacency, log_beta,
                      sorted_partition, fourier_freq_list, fourier_basis_list, ind):
     '''
     Slice sampling the edgeweight(exp('log_beta')) at 'ind' in 'log_beta' vector
     Note that model.kernel members (fourier_freq_list, fourier_basis_list) are updated.
     :param model:
-    :param grouped_input_data:
+    :param input_data:
     :param output_data:
     :param categories:
     :param list_of_adjacency:
@@ -51,6 +50,8 @@ def slice_edgeweight(model, grouped_input_data, output_data, list_of_adjacency, 
 
     model.kernel.fourier_freq_list = fourier_freq_list
     model.kernel.fourier_basis_list = fourier_basis_list
+    unit_in_group = compute_unit_in_group(sorted_partition=sorted_partition, categories=categories)
+    grouped_input_data = group_input(input_data=input_data, sorted_partition=sorted_partition, unit_in_group=unit_in_group)
     inference = Inference(train_data=(grouped_input_data, output_data), model=model)
 
     # numerical_buffer is added for numerical stability in eigendecomposition and subtracted later

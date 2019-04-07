@@ -2,9 +2,27 @@ import numpy as np
 
 import torch
 
+from GraphDecompositionBO.graphGP.inference.inference import Inference
+from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_unit_in_group, group_input
+from GraphDecompositionBO.graphGP.sampler.tool_slice_sampling import univariate_slice_sampling
+from GraphDecompositionBO.graphGP.sampler.priors import log_prior_constmean, log_prior_noisevar, log_prior_kernelamp
 
-from GraphDecompositionBO.sampler.tool_slice_sampling import univariate_slice_sampling
-from GraphDecompositionBO.sampler.priors import log_prior_constmean, log_prior_noisevar, log_prior_kernelamp
+
+def slice_hyper(model, input_data, output_data):
+	'''
+
+	:param model:
+	:param input_data:
+	:param output_data:
+	:return:
+	'''
+	unit_in_group = compute_unit_in_group(sorted_partition=sorted_partition, categories=categories)
+	grouped_input_data = group_input(input_data=input_data, sorted_partition=sorted_partition, unit_in_group=unit_in_group)
+	inference = Inference(train_data=(grouped_input_data, output_data), model=model)
+	# Randomly shuffling order can be considered, here the order is in const_mean, kernel_amp, noise_var
+	slice_constmean(inference)
+	slice_kernelamp(inference)
+	slice_noisevar(inference)
 
 
 def slice_constmean(inference):
