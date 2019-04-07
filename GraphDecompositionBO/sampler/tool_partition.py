@@ -4,9 +4,6 @@ import numpy as np
 import torch
 
 
-GRAPH_SIZE_LIMIT = 1024 + 2
-
-
 def np_kron(mat1, mat2):
 	'''
 	In order to check the function below 'def kronecker', numpy kron is used

@@ -3,31 +3,15 @@ import numpy as np
 import torch
 
 from GraphDecompositionBO.graphGP.inference.inference import Inference
-from GraphDecompositionBO.sampler.tool_partition import compute_unit_in_group, compute_group_size, group_input, strong_product, neighbor_partitions
-
-
-GRAPH_SIZE_LIMIT = 1024 + 2
-
-
-def partition_log_prior(sorted_partition, categories):
-	'''
-	Log of unnormalized density of given partition
-	this prior prefers well-spread partition, which is quantified by induced entropy as below
-	:param sorted_partition:
-	:return:
-	'''
-	if compute_group_size(sorted_partition=sorted_partition, categories=categories) > GRAPH_SIZE_LIMIT:
-		return -float('inf')
-	else:
-		prob_mass = np.array([np.sum(np.log(categories[subset])) for subset in sorted_partition])
-		prob_mass /= np.sum(prob_mass)
-		return np.log(np.sum(-prob_mass * np.log(prob_mass)))
+from GraphDecompositionBO.sampler.tool_partition import compute_unit_in_group, group_input, strong_product, neighbor_partitions
+from GraphDecompositionBO.sampler.priors import log_prior_partition
 
 
 def gibbs_partition(model, input_data, output_data, categories, list_of_adjacency, log_beta,
 					sorted_partition, fourier_freq_list, fourier_basis_list, ind):
 	"""
-	Gibbs sampling from a given partition by relocating ind
+	Gibbs sampling from a given partition by relocating 'ind' in 'sorted_partition'
+	Note that model.kernel members (fourier_freq_list, fourier_basis_list) are updated.
 	:param model:
 	:param input_data:
 	:param output_data:
@@ -51,7 +35,7 @@ def gibbs_partition(model, input_data, output_data, categories, list_of_adjacenc
 		eigen_decompositions[tuple(subset)] = (fourier_freq, fourier_basis)
 	inference = Inference(train_data=(None, output_data), model=model)
 	for cand_sorted_partition in candidate_sorted_partitions:
-		log_prior = partition_log_prior(sorted_partition=cand_sorted_partition, categories=categories)
+		log_prior = log_prior_partition(sorted_partition=cand_sorted_partition, categories=categories)
 		if np.isinf(log_prior):
 			unnormalized_log_posterior.append(log_prior)
 		else:

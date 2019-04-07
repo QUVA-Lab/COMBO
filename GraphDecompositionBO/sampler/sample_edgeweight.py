@@ -6,13 +6,15 @@ from GraphDecompositionBO.graphGP.inference.inference import Inference
 
 
 from GraphDecompositionBO.sampler.tool_partition import strong_product, kronecker
-from GraphDecompositionBO.sampler.tool_slice_sampling import univariate_slice_sampling, edgeweight_log_prior
+from GraphDecompositionBO.sampler.tool_slice_sampling import univariate_slice_sampling
+from GraphDecompositionBO.sampler.priors import log_prior_edgeweight
 
 
 def slice_edgeweight(model, grouped_input_data, output_data, list_of_adjacency, log_beta,
                      sorted_partition, fourier_freq_list, fourier_basis_list, ind):
     '''
-    Slice sampling edgeweight
+    Slice sampling the edgeweight(exp('log_beta')) at 'ind' in 'log_beta' vector
+    Note that model.kernel members (fourier_freq_list, fourier_basis_list) are updated.
     :param model:
     :param grouped_input_data:
     :param output_data:
@@ -54,7 +56,12 @@ def slice_edgeweight(model, grouped_input_data, output_data, list_of_adjacency, 
     # numerical_buffer is added for numerical stability in eigendecomposition and subtracted later
     numerical_buffer = 1.0
     def logp(log_beta_ind):
-        log_prior = edgeweight_log_prior(log_beta_ind)
+        '''
+        Note that model.kernel members (fourier_freq_list, fourier_basis_list) are updated.
+        :param log_beta_ind: numeric(float)
+        :return: numeric(float)
+        '''
+        log_prior = log_prior_edgeweight(log_beta_ind)
         if np.isinf(log_prior):
             return log_prior
         adj_id_added = list_of_adjacency[ind] * np.exp(log_beta_ind) + id_for_updated_adj_mat
@@ -67,9 +74,9 @@ def slice_edgeweight(model, grouped_input_data, output_data, list_of_adjacency, 
         fourier_freq_buffer, fourier_basis = torch.symeig(laplacian, eigenvectors=True)
         model.kernel.fourier_freq_list[updated_subset_ind] = (fourier_freq_buffer - numerical_buffer).clamp(min=0)
         model.kernel.fourier_basis_list[updated_subset_ind] = fourier_basis
-        return edgeweight_log_prior(log_beta_ind) - inference.negative_log_likelihood(hyper=model.param_to_vec())
+        return log_prior - float(inference.negative_log_likelihood(hyper=model.param_to_vec()))
 
-    x0 = log_beta[ind]
+    x0 = float(log_beta[ind])
     x1 = univariate_slice_sampling(logp, x0)
     log_beta[ind] = x1
     return log_beta, model.kernel.fourier_freq_list, model.kernel.fourier_basis_list

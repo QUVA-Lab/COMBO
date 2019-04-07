@@ -1,22 +1,16 @@
 import time
 import numpy as np
 
-import torch
 
-from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
-from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
-from GraphDecompositionBO.graphGP.inference.inference import Inference
-
-
-from GraphDecompositionBO.sampler.tool_partition import sort_partition, compute_unit_in_group, group_input, ungroup_input, strong_product, kronecker
+from GraphDecompositionBO.sampler.tool_partition import sort_partition, compute_unit_in_group, group_input, ungroup_input, strong_product
 
 
 def univariate_slice_sampling(logp, x0):
     '''
     Univariate Slice Sampling using doubling scheme
-    :param logp:
-    :param x0:
-    :return:
+    :param logp: numeric(float) -> numeric(float), a log density function
+    :param x0: numeric(float)
+    :return: numeric(float), sampled x1
     '''
     width = 1.0
     max_steps_out = 10
@@ -57,7 +51,7 @@ def univariate_slice_sampling(logp, x0):
         x1 = (upper - lower) * np.random.rand() + lower
         llh1 = logp(x1)
         if llh1 > slice_h and accept(logp, x0, x1, slice_h, width, start_lower, start_upper, llh_record):
-            return x1 + torch.zeros_like(x0)
+            return x1
         else:
             if x1 < x0:
                 lower = x1
@@ -92,21 +86,9 @@ def accept(logp, x0, x1, slice_h, width, lower, upper, llh_record):
     return True
 
 
-def edgeweight_log_prior(log_beta_ind):
-    '''
-
-    :param log_beta_ind: scalar ind-th element of log_beta
-    :return:
-    '''
-    # TODO : define a prior prior for (scalar) log_beta
-    if np.exp(log_beta_ind) > 2.0:
-        return -float('inf')
-    else:
-        return np.log(1.0 / 2.0)
-
-
 if __name__ == '__main__':
     import progressbar
+    import torch
     n_vars = 50
     n_data = 60
     categories = np.random.randint(2, 3, n_vars)
