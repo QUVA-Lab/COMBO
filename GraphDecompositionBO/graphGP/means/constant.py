@@ -10,15 +10,6 @@ class ConstantMean(Mean):
 		super(ConstantMean, self).__init__()
 		self.const_mean = Parameter(torch.FloatTensor(1))
 
-	def reset_parameters(self):
-		self.const_mean.data.normal_(std=10.0) # approximation to uniform
-
-	def out_of_bounds(self, vec=None):
-		if vec is None:
-			return False
-		else:
-			return False
-
 	def n_params(self):
 		return 1
 
@@ -27,9 +18,6 @@ class ConstantMean(Mean):
 
 	def vec_to_param(self, vec):
 		self.const_mean.data = vec
-
-	def prior_log_lik(self, vec):
-		return 0
 
 	def forward(self, input):
 		return self.const_mean * torch.ones(input.size(0), 1, device=input.device)

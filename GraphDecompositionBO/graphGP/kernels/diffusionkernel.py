@@ -1,7 +1,7 @@
 import math
 
 import torch
-from GraphDecompositionBO.graphGP.kernels.graphkernel import GraphKernel, log_lower_bnd, log_upper_bnd
+from GraphDecompositionBO.graphGP.kernels.graphkernel import GraphKernel
 
 
 class DiffusionKernel(GraphKernel):

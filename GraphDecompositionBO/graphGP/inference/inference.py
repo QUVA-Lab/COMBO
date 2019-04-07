@@ -1,7 +1,4 @@
-import time
-
 import numpy as np
-import sampyl as smp
 
 import torch
 import torch.nn as nn
@@ -20,22 +17,6 @@ class Inference(nn.Module):
 		self.gram_mat = None
 		self.cholesky = None
 		self.jitter = 0
-
-	def reset_parameters(self):
-		self.model.reset_parameters()
-
-	def init_parameters(self):
-		amp = float(torch.std(self.train_y))
-		self.model.kernel.init_parameters(amp)
-		self.model.mean.const_mean.data.fill_(torch.mean(self.train_y.data))
-		self.model.likelihood.log_noise_var.data.fill_(np.log(amp / 1000.0))
-
-	def stable_parameters(self):
-		const_mean = float(self.model.mean.const_mean.data)
-		return self.output_min <= const_mean <= self.output_max
-
-	def log_kernel_amp(self):
-		return self.model.log_kernel_amp()
 
 	def gram_mat_update(self, hyper=None):
 		if hyper is not None:
@@ -93,33 +74,6 @@ class Inference(nn.Module):
 		if hyper is not None:
 			self.cholesky_update(param_original)
 		return nll
-
-	def sampling(self, n_sample=10, n_burnin=100, n_thin=10):
-		type_as_arg = list(self.model.likelihood.parameters())[0].data
-		def logp(hyper):
-			hyper_tensor = torch.from_numpy(hyper).type_as(type_as_arg)
-			if self.model.out_of_bounds(hyper):
-				return -np.inf
-			self.model.vec_to_param(hyper_tensor)
-			if not self.stable_parameters():
-				return -np.inf
-			prior_ll = self.model.prior_log_lik(hyper)
-			log_likelihood = -self.negative_log_likelihood(hyper_tensor).item()
-			return prior_ll + log_likelihood
-		# Sampling is continued from the parameter values from previous acquisition step
-		hyper_numpy = self.model.param_to_vec().numpy()
-
-		start_time = time.time()
-		###--------------------------------------------------###
-		# This block can be modified to use other sampling method
-		sampler = smp.Slice(logp=logp, start={u'hyper': hyper_numpy}, compwise=True)
-		samples = sampler.sample(n_burnin + n_thin * n_sample, burn=n_burnin + n_thin - 1, thin=n_thin)
-		###--------------------------------------------------###
-		print('Sampling : ' + time.strftime('%H:%M:%S', time.gmtime(time.time() - start_time)))
-
-		# Here, model parameters are updated and stored to model
-		self.cholesky_update(torch.from_numpy(samples[-1][0]).type_as(type_as_arg))
-		return torch.stack([torch.from_numpy(elm[0]) for elm in samples], 0).type_as(type_as_arg)
 
 
 if __name__ == '__main__':
