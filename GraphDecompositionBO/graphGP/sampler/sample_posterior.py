@@ -22,6 +22,8 @@ def posterior_sampling(model, input_data, output_data, categories, list_of_adjac
 	sample_hyper = []
 	sample_log_beta = []
 	sample_partition = []
+	sample_freq = []
+	sample_basis = []
 	if thinning is None:
 		thinning = n_sample
 	partition_sample = sorted_partition
@@ -33,7 +35,7 @@ def posterior_sampling(model, input_data, output_data, categories, list_of_adjac
 
 		fourier_freq_list = model.kernel.fourier_freq_list
 		fourier_basis_list = model.kernel.fourier_basis_list
-		# In 'Batched High-dimensional Bayesian Optimization via Structural Kernel Learning', similar additive structure is updated for every 50 iterations
+		# In 'Batched High-dimensional Bayesian Optimization via Structural Kernel Learning', similar additive structure is updated for every 50 iterations(evaluations)
 		# This may be due to too much variability if decomposition is learned every iterations.
 		# Thus, when multiple points are sampled, sweeping all inds for each sample may be not a good practice
 		# For example if there are 50 variables and 10 samples are needed, then after shuffling indices, and 50/10 thinning can be used.
@@ -52,5 +54,7 @@ def posterior_sampling(model, input_data, output_data, categories, list_of_adjac
 				sample_hyper.append(model.vec_to_param())
 				sample_log_beta.append(log_beta_sample.clone())
 				sample_partition.append(copy.deepcopy(sorted_partition))
-
-	return sample_hyper, sample_log_beta, sample_partition
+				sample_freq.append([elm.clone() for elm in fourier_freq_list])
+				sample_basis.append([elm.clone() for elm in fourier_basis_list])
+			if len(sample_hyper) == n_sample:
+				return sample_hyper, sample_log_beta, sample_partition, sample_freq, sample_basis

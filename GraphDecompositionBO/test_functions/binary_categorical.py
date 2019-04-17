@@ -106,7 +106,7 @@ class Ising1(object):
         x_h, x_v = _bocs_consistency_mapping(x.numpy())
         interaction_sparsified = x_h * self.interaction[0], x_v * self.interaction[1]
         partition_sparsified = partition(interaction_sparsified, (ISING_GRID_H, ISING_GRID_W))
-        evaluation = _ising_dense(interaction_sparsified=interaction_sparsified, interaction_original=self.interaction,
+        evaluation = ising_dense(interaction_sparsified=interaction_sparsified, interaction_original=self.interaction,
                                   covariance=self.covariance, partition_sparsified=partition_sparsified, partition_original=self.partition_original)
         evaluation += self.lamda * float(torch.sum(x))
         return evaluation * x.new_ones((1,)).float()
@@ -148,7 +148,7 @@ class Ising2(object):
         x_h, x_v = _bocs_consistency_mapping(x.numpy())
         interaction_sparsified = x_h * self.interaction[0], x_v * self.interaction[1]
         partition_sparsified = partition(interaction_sparsified, (ISING_GRID_H, ISING_GRID_W))
-        evaluation = _ising_dense(interaction_sparsified=interaction_sparsified, interaction_original=self.interaction,
+        evaluation = ising_dense(interaction_sparsified=interaction_sparsified, interaction_original=self.interaction,
                                   covariance=self.covariance, partition_sparsified=partition_sparsified, partition_original=self.partition_original)
         evaluation += self.lamda * float(torch.sum(x))
         return evaluation * x.new_ones((1,)).float()

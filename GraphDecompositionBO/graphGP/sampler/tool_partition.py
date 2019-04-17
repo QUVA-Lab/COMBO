@@ -154,28 +154,28 @@ def neighbor_partitions(sorted_partition, ind):
 
 
 if __name__ == '__main__':
-	n_vars = 50
-	n_data = 60
-	categories = np.random.randint(2, 3, n_vars)
-	list_of_adjacency = []
-	for d in range(n_vars):
-		adjacency = torch.ones(categories[d], categories[d])
-		adjacency[range(categories[d]), range(categories[d])] = 0
-		list_of_adjacency.append(adjacency)
-	input_data = torch.zeros(n_data, n_vars).long()
-	output_data = torch.randn(n_data, 1)
-	for a in range(n_vars):
-		input_data[:, a] = torch.randint(0, categories[a], (n_data,))
-	inds = range(n_vars)
-	np.random.shuffle(inds)
-	b = 0
-	random_partition = []
-	while b < n_vars:
-		subset_size = np.random.poisson(2) + 1
-		random_partition.append(inds[b:b + subset_size])
-		b += subset_size
-	sorted_partition = sort_partition(random_partition)
-	unit_in_group = compute_unit_in_group(sorted_partition, categories)
-	grouped_input = group_input(input_data, sorted_partition, unit_in_group)
-	input_data_re = ungroup_input(grouped_input, sorted_partition, unit_in_group)
-	print(torch.sum((input_data - input_data_re) ** 2))
+	n_vars_ = 50
+	n_data_ = 60
+	categories_ = np.random.randint(2, 3, n_vars_)
+	list_of_adjacency_ = []
+	for d_ in range(n_vars_):
+		adjacency_ = torch.ones(categories_[d_], categories_[d_])
+		adjacency_[range(categories_[d_]), range(categories_[d_])] = 0
+		list_of_adjacency_.append(adjacency_)
+	input_data_ = torch.zeros(n_data_, n_vars_).long()
+	output_data_ = torch.randn(n_data_, 1)
+	for a_ in range(n_vars_):
+		input_data_[:, a_] = torch.randint(0, categories_[a_], (n_data_,))
+	inds_ = range(n_vars_)
+	np.random.shuffle(inds_)
+	b_ = 0
+	random_partition_ = []
+	while b_ < n_vars_:
+		subset_size_ = np.random.poisson(2) + 1
+		random_partition_.append(inds_[b_:b_ + subset_size_])
+		b_ += subset_size_
+	sorted_partition_ = sort_partition(random_partition_)
+	unit_in_group_ = compute_unit_in_group(sorted_partition_, categories_)
+	grouped_input_ = group_input(input_data_, sorted_partition_, unit_in_group_)
+	input_data_re_ = ungroup_input(grouped_input_, sorted_partition_, unit_in_group_)
+	print(torch.sum((input_data_ - input_data_re_) ** 2))
