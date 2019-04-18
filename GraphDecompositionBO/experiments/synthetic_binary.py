@@ -23,7 +23,7 @@ def generate_function_on_highorderbinary(n_variables, highest_order, random_seed
 	return interaction_coef
 
 
-def high_interaction_function(x, interaction_coef):
+def highorder_interaction_function(x, interaction_coef):
 	'''
 	:param x: np.array 2 dimensional array
 	:param interaction: list of tuple, tuple of interactions and coefficient
@@ -59,5 +59,5 @@ class HighOrderBinary(object):
 		if x.dim() == 1:
 			x = x.unsqueeze(0)
 		assert x.size(1) == self.n_variables
-		evaluation = torch.from_numpy(high_interaction_function(x.numpy(), self.interaction_coef).astype(np.float32))
+		evaluation = torch.from_numpy(highorder_interaction_function(x.numpy(), self.interaction_coef).astype(np.float32))
 		return evaluation

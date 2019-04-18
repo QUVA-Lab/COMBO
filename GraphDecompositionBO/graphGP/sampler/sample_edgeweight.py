@@ -6,7 +6,6 @@ from GraphDecompositionBO.graphGP.inference.inference import Inference
 from GraphDecompositionBO.graphGP.sampler.tool_partition import strong_product, kronecker
 from GraphDecompositionBO.graphGP.sampler.tool_slice_sampling import univariate_slice_sampling
 from GraphDecompositionBO.graphGP.sampler.priors import log_prior_edgeweight
-from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_unit_in_group, group_input
 
 
 def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacency, log_beta,
@@ -17,10 +16,10 @@ def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacen
     :param model:
     :param input_data:
     :param output_data:
-    :param categories:
-    :param list_of_adjacency:
+    :param categories: list of the number of categories in each of K categorical variables
+    :param list_of_adjacency: list of 2D torch.Tensor of adjacency matrix
     :param log_beta:
-    :param sorted_partition:
+    :param sorted_partition: Partition of {0, ..., K-1}, list of subsets(list)
     :param fourier_freq_list:
     :param fourier_basis_list:
     :param ind:

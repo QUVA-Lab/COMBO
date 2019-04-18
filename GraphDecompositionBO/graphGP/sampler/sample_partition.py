@@ -16,9 +16,9 @@ def gibbs_partition(model, input_data, output_data, categories, list_of_adjacenc
 	:param input_data:
 	:param output_data:
 	:param categories: list of the number of categories in each of K categorical variables
-	:param list_of_adjacency:
+	:param list_of_adjacency: list of 2D torch.Tensor of adjacency matrix
 	:param log_beta:
-	:param sorted_partition: Partition of {1, ..., K}
+	:param sorted_partition: Partition of {0, ..., K-1}, list of subsets(list)
 	:param fourier_freq_list: frequencies for subsets in sorted_partition
 	:param fourier_basis_list: basis for subsets in sorted_partition
 	:param ind: the index of the variable to be relocated in the sorted_partition
