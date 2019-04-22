@@ -12,7 +12,7 @@ def posterior_sampling(model, input_data, output_data, categories, list_of_adjac
 	:param model: model.kernel members fourier_freq_list, fourier_basis_list is grouped
 	:param input_data:
 	:param output_data:
-	:param list_of_adjacency: list of 2D torch.Tensor of adjacency matrix
+	:param list_of_adjacency: list of 2D torch.Tensor of adjacency matrix of base subgraphs
 	:param log_beta:
 	:param sorted_partition: Partition of {0, ..., K-1}, list of subsets(list)
 	:param n_sample:
@@ -31,7 +31,7 @@ def posterior_sampling(model, input_data, output_data, categories, list_of_adjac
 
 	cnt = 0
 	while len(sample_hyper) < n_sample:
-		slice_hyper(model=model, input_data=input_data, output_data=output_data)
+		slice_hyper(model=model, input_data=input_data, output_data=output_data, categories=categories, sorted_partition=sorted_partition)
 
 		fourier_freq_list = model.kernel.fourier_freq_list
 		fourier_basis_list = model.kernel.fourier_basis_list

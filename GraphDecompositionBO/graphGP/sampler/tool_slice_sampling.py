@@ -1,26 +1,22 @@
-import time
 import numpy as np
 
 
-from GraphDecompositionBO.graphGP.sampler.tool_partition import sort_partition, compute_unit_in_group, group_input, ungroup_input, strong_product
-
-
-def univariate_slice_sampling(logp, x0):
+def univariate_slice_sampling(logp, x0, width=1.0, max_steps_out=10):
     '''
     Univariate Slice Sampling using doubling scheme
     :param logp: numeric(float) -> numeric(float), a log density function
     :param x0: numeric(float)
+    :param width:
+    :param max_steps_out:
     :return: numeric(float), sampled x1
     '''
-    width = 1.0
-    max_steps_out = 10
-    upper = width * np.random.rand()
-    lower = upper - width
+    lower = x0 - width * np.random.rand()
+    upper = lower + width
     llh0 = logp(x0)
     slice_h = np.log(np.random.rand()) + llh0
     llh_record = {}
 
-    # Step Out
+    # Step Out (doubling)
     steps_out = 0
     logp_lower = logp(lower)
     logp_upper = logp(upper)

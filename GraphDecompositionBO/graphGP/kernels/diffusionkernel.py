@@ -69,8 +69,8 @@ if __name__ == '__main__':
 		fourier_freq_list.append(eigval)
 		fourier_basis_list.append(eigvec)
 	k = DiffusionKernel(fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list)
-	k.log_amp.data.fill_(0)
-	k.log_beta.data.fill_(math.log(0.05))
+	k.log_amp.fill_(0)
+	k.log_beta.fill_(math.log(0.05))
 	input_data = torch.empty([0, n_variables])
 	for i in range(n_data):
 		datum = torch.zeros([1, n_variables])

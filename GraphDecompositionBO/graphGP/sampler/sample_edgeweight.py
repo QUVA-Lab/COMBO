@@ -5,6 +5,7 @@ import torch
 from GraphDecompositionBO.graphGP.inference.inference import Inference
 from GraphDecompositionBO.graphGP.sampler.tool_partition import strong_product, kronecker
 from GraphDecompositionBO.graphGP.sampler.tool_slice_sampling import univariate_slice_sampling
+from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_unit_in_group, group_input
 from GraphDecompositionBO.graphGP.sampler.priors import log_prior_edgeweight
 
 
@@ -16,8 +17,8 @@ def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacen
     :param model:
     :param input_data:
     :param output_data:
-    :param categories: list of the number of categories in each of K categorical variables
-    :param list_of_adjacency: list of 2D torch.Tensor of adjacency matrix
+    :param categories: 1d np.array
+    :param list_of_adjacency: list of 2D torch.Tensor of adjacency matrix of base subgraphs
     :param log_beta:
     :param sorted_partition: Partition of {0, ..., K-1}, list of subsets(list)
     :param fourier_freq_list:
@@ -86,10 +87,13 @@ if __name__ == '__main__':
     pass
     import progressbar
     import time
-    from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
-    from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
-    from GraphDecompositionBO.graphGP.sampler.tool_partition import sort_partition, compute_unit_in_group, group_input, ungroup_input
-    from GraphDecompositionBO.graphGP.sampler.priors import log_prior_partition
+    from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel as DiffusionKernel_
+    from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression as GPRegression_
+    from GraphDecompositionBO.graphGP.sampler.tool_partition import sort_partition as sort_partition_
+    from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_unit_in_group as compute_unit_in_group_
+    from GraphDecompositionBO.graphGP.sampler.tool_partition import group_input as group_input_
+    from GraphDecompositionBO.graphGP.sampler.tool_partition import ungroup_input as ungroup_input_
+    from GraphDecompositionBO.graphGP.sampler.priors import log_prior_partition as log_prior_partition_
     n_vars_ = 100
     n_data_ = 60
     categories_ = np.random.randint(5, 6, n_vars_)
@@ -111,22 +115,22 @@ if __name__ == '__main__':
             subset_size_ = np.random.randint(1, 5)
             random_partition_.append(inds_[b_:b_ + subset_size_])
             b_ += subset_size_
-        sorted_partition_ = sort_partition(random_partition_)
+        sorted_partition_ = sort_partition_(random_partition_)
         print(sorted_partition_)
-        if np.isinf(log_prior_partition(sorted_partition_, categories_)):
+        if np.isinf(log_prior_partition_(sorted_partition_, categories_)):
             print('Infeasible partition')
         else:
             print('Feasible partition')
             break
-    unit_in_group_ = compute_unit_in_group(sorted_partition_, categories_)
-    grouped_input_data_ = group_input(input_data_, sorted_partition_, unit_in_group_)
-    input_data_re_ = ungroup_input(grouped_input_data_, sorted_partition_, unit_in_group_)
+    unit_in_group_ = compute_unit_in_group_(sorted_partition_, categories_)
+    grouped_input_data_ = group_input_(input_data_, sorted_partition_, unit_in_group_)
+    input_data_re_ = ungroup_input_(grouped_input_data_, sorted_partition_, unit_in_group_)
     amp_ = torch.std(output_data_, dim=0)
     log_beta_ = torch.randn(n_vars_)
-    model_ = GPRegression(kernel=DiffusionKernel(fourier_freq_list=[], fourier_basis_list=[]))
-    model_.kernel.log_amp.data = torch.log(amp_)
-    model_.mean.const_mean.data = torch.mean(output_data_, dim=0)
-    model_.likelihood.log_noise_var.data = torch.log(amp_ / 1000.)
+    model_ = GPRegression_(kernel=DiffusionKernel_(fourier_freq_list=[], fourier_basis_list=[]))
+    model_.kernel.log_amp = torch.log(amp_)
+    model_.mean.const_mean = torch.mean(output_data_, dim=0)
+    model_.likelihood.log_noise_var = torch.log(amp_ / 1000.)
 
     start_time_ = time.time()
     fourier_freq_list_ = []

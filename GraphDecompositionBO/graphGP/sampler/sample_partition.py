@@ -15,8 +15,8 @@ def gibbs_partition(model, input_data, output_data, categories, list_of_adjacenc
 	:param model:
 	:param input_data:
 	:param output_data:
-	:param categories: list of the number of categories in each of K categorical variables
-	:param list_of_adjacency: list of 2D torch.Tensor of adjacency matrix
+	:param categories:  1d np.array
+	:param list_of_adjacency: list of 2D torch.Tensor of adjacency matrix of base subgraphs
 	:param log_beta:
 	:param sorted_partition: Partition of {0, ..., K-1}, list of subsets(list)
 	:param fourier_freq_list: frequencies for subsets in sorted_partition
@@ -57,8 +57,8 @@ def gibbs_partition(model, input_data, output_data, categories, list_of_adjacenc
 			inference.train_x = grouped_input_data
 			model.kernel.fourier_freq_list = fourier_freq_list
 			model.kernel.fourier_basis_list = fourier_basis_list
-			ll = -inference.negative_log_likelihood(hyper=model.param_to_vec())
-			unnormalized_log_posterior.append(log_prior + ll)
+			log_likelihood = -inference.negative_log_likelihood(hyper=model.param_to_vec())
+			unnormalized_log_posterior.append(log_prior + log_likelihood)
 	# Gumbel Max trick : No need to calculate the normalizing constant for multinomial random variables
 	unnormalized_log_posterior = np.array(unnormalized_log_posterior)
 	gumbel_max_rv = np.argmax(-np.log(-np.log(np.random.uniform(0, 1, unnormalized_log_posterior.shape))) + unnormalized_log_posterior)
@@ -115,9 +115,9 @@ if __name__ == '__main__':
 	amp_ = torch.std(output_data_, dim=0)
 	log_beta_ = torch.randn(n_vars_)
 	model_ = GPRegression(kernel=DiffusionKernel(fourier_freq_list=[], fourier_basis_list=[]))
-	model_.kernel.log_amp.data = torch.log(amp_)
-	model_.mean.const_mean.data = torch.mean(output_data_, dim=0)
-	model_.likelihood.log_noise_var.data = torch.log(amp_ / 1000.)
+	model_.kernel.log_amp = torch.log(amp_)
+	model_.mean.const_mean = torch.mean(output_data_, dim=0)
+	model_.likelihood.log_noise_var = torch.log(amp_ / 1000.)
 
 	start_time_ = time.time()
 	fourier_freq_list_ = []

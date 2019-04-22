@@ -16,13 +16,6 @@ GRAPH_SIZE_LIMIT = 1024 + 2
 # TODO define a prior prior for (scalar) log_beta
 
 
-def init_parameters(model, output_data):
-	amp = float(torch.std(output_data))
-	model.kernel.init_parameters(amp)
-	model.mean.const_mean.data.fill_(float(torch.mean(output_data)))
-	model.likelihood.log_noise_var.data.fill_(np.log(amp / 1000.0))
-
-
 def log_prior_constmean(constmean, output_min, output_max):
 	'''
 	:param constmean: numeric(float)

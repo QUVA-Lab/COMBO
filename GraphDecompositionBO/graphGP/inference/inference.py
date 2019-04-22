@@ -11,8 +11,8 @@ class Inference(nn.Module):
 		self.model = model
 		self.train_x = train_data[0]
 		self.train_y = train_data[1]
-		self.output_min = torch.min(self.train_y.data)
-		self.output_max = torch.max(self.train_y.data)
+		self.output_min = torch.min(self.train_y)
+		self.output_max = torch.max(self.train_y)
 		self.mean_vec = None
 		self.gram_mat = None
 		self.cholesky = None
@@ -34,7 +34,7 @@ class Inference(nn.Module):
 				torch.gesv(self.gram_mat[:, :1], self.cholesky)
 				break
 			except RuntimeError:
-				chol_jitter = self.gram_mat.data[0, 0] * 1e-6 if chol_jitter == 0 else chol_jitter * 10
+				chol_jitter = self.gram_mat[0, 0] * 1e-6 if chol_jitter == 0 else chol_jitter * 10
 		self.jitter = chol_jitter
 
 	def predict(self, pred_x, hyper=None, verbose=False):
@@ -54,8 +54,8 @@ class Inference(nn.Module):
 		pred_var = k_pred - pred_quad
 
 		if verbose:
-			numerically_stable = (pred_var.data >= 0).all()
-			zero_pred_var = (pred_var.data <= 0).all()
+			numerically_stable = (pred_var >= 0).all()
+			zero_pred_var = (pred_var <= 0).all()
 
 		if hyper is not None:
 			self.cholesky_update(param_original)

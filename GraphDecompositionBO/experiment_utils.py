@@ -67,7 +67,7 @@ def displaying_and_logging(logfile_dir, eval_inputs, eval_outputs, pred_mean_lis
 		             pred_std_list[i],
 		             pred_var_list[i],
 		             min_val.item(), min_ind.item() + 1))
-		min_str = '  <==== IMPROVED' if i == min_ind.data.item() else ''
+		min_str = '  <==== IMPROVED' if i == min_ind.item() else ''
 		print(time_str + data_str + min_str)
 		logfile.writelines(time_str + data_str + min_str + '\n')
 	logfile.close()

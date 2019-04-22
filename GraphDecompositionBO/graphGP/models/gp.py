@@ -6,6 +6,9 @@ class GP(GPModule):
 	def __init__(self, **kwargs):
 		super(GP, self).__init__()
 
+	def init_param(self, output_data):
+		raise NotImplementedError
+
 	def n_params(self):
 		cnt = 0
 		for param in self.parameters():

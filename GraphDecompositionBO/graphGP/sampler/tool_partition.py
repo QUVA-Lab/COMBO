@@ -62,7 +62,7 @@ def compute_group_size(sorted_partition, categories):
 	'''
 	Return the size of the largest subgraph (a product of strong product)
 	:param sorted_partition:
-	:param categories:
+	:param categories: 1d np.array
 	:return:
 	'''
 	complexity = sum([np.prod(categories[subset]) ** 3 for subset in sorted_partition])

@@ -185,9 +185,9 @@ def _mean_std_var(x, inferences):
         pred_mean_sample = pred_dist[0]
         pred_var_sample = pred_dist[1]
         pred_std_sample = pred_var_sample ** 0.5
-        mean_sample_list.append(pred_mean_sample.data)
-        std_sample_list.append(pred_std_sample.data)
-        var_sample_list.append(pred_var_sample.data)
+        mean_sample_list.append(pred_mean_sample)
+        std_sample_list.append(pred_std_sample)
+        var_sample_list.append(pred_var_sample)
     return torch.cat(mean_sample_list, 1).mean(1, keepdim=True),\
            torch.cat(std_sample_list, 1).mean(1, keepdim=True),\
            torch.cat(var_sample_list, 1).mean(1, keepdim=True)

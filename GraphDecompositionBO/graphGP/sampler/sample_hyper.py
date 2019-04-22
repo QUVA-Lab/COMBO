@@ -8,7 +8,7 @@ from GraphDecompositionBO.graphGP.sampler.tool_slice_sampling import univariate_
 from GraphDecompositionBO.graphGP.sampler.priors import log_prior_constmean, log_prior_noisevar, log_prior_kernelamp
 
 
-def slice_hyper(model, input_data, output_data):
+def slice_hyper(model, input_data, output_data, categories, sorted_partition):
 	'''
 
 	:param model:
@@ -32,21 +32,23 @@ def slice_constmean(inference):
 	:param inference:
 	:return:
 	'''
+	output_min = torch.min(inference.train_y).item()
+	output_max = torch.max(inference.train_y).item()
 	def logp(constmean):
 		'''
 		:param constmean: numeric(float)
 		:return: numeric(float)
 		'''
-		log_prior = log_prior_constmean(constmean)
+		log_prior = log_prior_constmean(constmean, output_min=output_min, output_max=output_max)
 		if np.isinf(log_prior):
 			return log_prior
-		inference.model.mean.const_mean.data.fill_(constmean)
-		log_likelihood = float(-inference.negative_log_likelihood(hyper=model.param_to_vec()))
+		inference.model.mean.const_mean.fill_(constmean)
+		log_likelihood = float(-inference.negative_log_likelihood(hyper=inference.model.param_to_vec()))
 		return log_prior + log_likelihood
 
-	x0 = float(model.mean.const_mean)
+	x0 = float(inference.model.mean.const_mean)
 	x1 = univariate_slice_sampling(logp, x0)
-	model.mean.const_mean.data.fill_(x1)
+	inference.model.mean.const_mean.fill_(x1)
 	return
 
 
@@ -66,13 +68,13 @@ def slice_noisevar(inference):
 		log_prior = log_prior_noisevar(log_noise_var)
 		if np.isinf(log_prior):
 			return log_prior
-		inference.model.likelihood.log_noise_var.data.fill_(log_noise_var)
-		log_likelihood = float(-inference.negative_log_likelihood(hyper=model.param_to_vec()))
+		inference.model.likelihood.log_noise_var.fill_(log_noise_var)
+		log_likelihood = float(-inference.negative_log_likelihood(hyper=inference.model.param_to_vec()))
 		return log_prior + log_likelihood
 
-	x0 = float(model.likelihood.log_noise_var)
+	x0 = float(inference.model.likelihood.log_noise_var)
 	x1 = univariate_slice_sampling(logp, x0)
-	inference.model.likelihood.log_noise_var.data.fill_(x1)
+	inference.model.likelihood.log_noise_var.fill_(x1)
 	return
 
 
@@ -92,50 +94,48 @@ def slice_kernelamp(inference):
 		log_prior = log_prior_kernelamp(log_amp)
 		if np.isinf(log_prior):
 			return log_prior
-		inference.model.kernel.log_amp.data.fill_(log_amp)
-		log_likelihood = float(-inference.negative_log_likelihood(hyper=model.param_to_vec()))
+		inference.model.kernel.log_amp.fill_(log_amp)
+		log_likelihood = float(-inference.negative_log_likelihood(hyper=inference.model.param_to_vec()))
 		return log_prior + log_likelihood
 
-	x0 = float(model.kernel.log_amp)
+	x0 = float(inference.model.kernel.log_amp)
 	x1 = univariate_slice_sampling(logp, x0)
-	inference.model.kernel.log_amp.data.fill_(x1)
+	inference.model.kernel.log_amp.fill_(x1)
 	return
 
 
 if __name__ == '__main__':
 	pass
-	import progressbar
-	import time
 	from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
 	from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
 	from GraphDecompositionBO.sampler.tool_partition import sort_partition, compute_unit_in_group, group_input, ungroup_input
-	n_vars = 50
-	n_data = 60
-	categories = np.random.randint(2, 3, n_vars)
-	list_of_adjacency = []
-	for d in range(n_vars):
-		adjacency = torch.ones(categories[d], categories[d])
-		adjacency[range(categories[d]), range(categories[d])] = 0
-		list_of_adjacency.append(adjacency)
-	input_data = torch.zeros(n_data, n_vars).long()
-	output_data = torch.randn(n_data, 1)
-	for a in range(n_vars):
-		input_data[:, a] = torch.randint(0, categories[a], (n_data,))
-	inds = range(n_vars)
-	np.random.shuffle(inds)
-	b = 0
-	random_partition = []
-	while b < n_vars:
-		subset_size = np.random.poisson(2) + 1
-		random_partition.append(inds[b:b + subset_size])
-		b += subset_size
-	sorted_partition = sort_partition(random_partition)
-	unit_in_group = compute_unit_in_group(sorted_partition, categories)
-	grouped_input_data = group_input(input_data, sorted_partition, unit_in_group)
-	input_data_re = ungroup_input(grouped_input_data, sorted_partition, unit_in_group)
-	amp = torch.std(output_data, dim=0)
-	log_beta = torch.randn(n_vars)
-	model = GPRegression(kernel=DiffusionKernel(fourier_freq_list=[], fourier_basis_list=[]))
-	model.kernel.log_amp.data = torch.log(amp)
-	model.mean.const_mean.data = torch.mean(output_data, dim=0)
-	model.likelihood.log_noise_var.data = torch.log(amp / 1000.)
+	n_vars_ = 50
+	n_data_ = 60
+	categories_ = np.random.randint(2, 3, n_vars_)
+	list_of_adjacency_ = []
+	for d_ in range(n_vars_):
+		adjacency_ = torch.ones(categories_[d_], categories_[d_])
+		adjacency_[range(categories_[d_]), range(categories_[d_])] = 0
+		list_of_adjacency_.append(adjacency_)
+	input_data_ = torch.zeros(n_data_, n_vars_).long()
+	output_data_ = torch.randn(n_data_, 1)
+	for a_ in range(n_vars_):
+		input_data_[:, a_] = torch.randint(0, categories_[a_], (n_data_,))
+	inds_ = range(n_vars_)
+	np.random.shuffle(inds_)
+	b_ = 0
+	random_partition_ = []
+	while b_ < n_vars_:
+		subset_size_ = np.random.poisson(2) + 1
+		random_partition_.append(inds_[b_:b_ + subset_size_])
+		b_ += subset_size_
+	sorted_partition_ = sort_partition(random_partition_)
+	unit_in_group_ = compute_unit_in_group(sorted_partition_, categories_)
+	grouped_input_data_ = group_input(input_data_, sorted_partition_, unit_in_group_)
+	input_data_re_ = ungroup_input(grouped_input_data_, sorted_partition_, unit_in_group_)
+	amp_ = torch.std(output_data_, dim=0)
+	log_beta_ = torch.randn(n_vars_)
+	model_ = GPRegression(kernel=DiffusionKernel(fourier_freq_list=[], fourier_basis_list=[]))
+	model_.kernel.log_amp = torch.log(amp_)
+	model_.mean.const_mean = torch.mean(output_data_, dim=0)
+	model_.likelihood.log_noise_var = torch.log(amp_ / 1000.)
