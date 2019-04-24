@@ -19,7 +19,7 @@ class ConstantMean(Mean):
 		self.const_mean = vec.clone()
 
 	def forward(self, input):
-		return self.const_mean * torch.ones(input.size(0), 1, device=input.device)
+		return self.const_mean * input.new_ones(input.size(0), 1).float()
 
 	def __repr__(self):
 		return self.__class__.__name__

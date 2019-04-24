@@ -22,9 +22,9 @@ def load_spect(train_data_scale, random_seed=None):
 	shuffled_ind = range(data.size()[0])
 	np.random.RandomState(random_seed).shuffle(shuffled_ind)
 	train_ind = shuffled_ind[:n_train]
-	test_ind = shuffled_ind[n_train]
+	test_ind = shuffled_ind[n_train:]
 	input_data = data[:, 1:]
-	output_data = data[:, 0]
+	output_data = data[:, 0:1]
 	train_input = input_data[train_ind]
 	train_output = output_data[train_ind]
 	test_input = input_data[test_ind]
@@ -47,14 +47,14 @@ def load_voting(train_data_scale, random_seed=None):
 	input_data[input_data == 'n'] = 0
 	input_data[input_data == '?'] = 2
 	input_data = torch.from_numpy(input_data.astype(np.int))
-	output_data = data.iloc[:, 0].to_numpy()
+	output_data = data.iloc[:, 0:1].to_numpy()
 	output_data[output_data == 'republican'] = 1
 	output_data[output_data == 'democrat'] = 0
 	output_data = torch.from_numpy(output_data.astype(np.int))
 	shuffled_ind = range(output_data.size()[0])
 	np.random.RandomState(random_seed).shuffle(shuffled_ind)
 	train_ind = shuffled_ind[:n_train]
-	test_ind = shuffled_ind[n_train]
+	test_ind = shuffled_ind[n_train:]
 	train_input = input_data[train_ind]
 	train_output = output_data[train_ind]
 	test_input = input_data[test_ind]
@@ -77,14 +77,14 @@ def load_tictactoe(train_data_scale, random_seed=None):
 	input_data[input_data == 'x'] = 1
 	input_data[input_data == 'b'] = 0
 	input_data = torch.from_numpy(input_data.astype(np.int))
-	output_data = data.iloc[:, -1].to_numpy()
+	output_data = data.iloc[:, -1:].to_numpy()
 	output_data[output_data == 'positive'] = 1
 	output_data[output_data == 'negative'] = 0
 	output_data = torch.from_numpy(output_data.astype(np.int))
 	shuffled_ind = range(output_data.size()[0])
 	np.random.RandomState(random_seed).shuffle(shuffled_ind)
 	train_ind = shuffled_ind[:n_train]
-	test_ind = shuffled_ind[n_train]
+	test_ind = shuffled_ind[n_train:]
 	train_input = input_data[train_ind]
 	train_output = output_data[train_ind]
 	test_input = input_data[test_ind]
@@ -102,11 +102,11 @@ def load_highorderbinary(data_type, train_data_scale, random_seed=None):
 	n_train = train_data_scale * int(n_data * 0.1)
 	input_data = np.random.RandomState(data_seed).randint(0, 2, [n_data, n_variable])
 	interaction_coef = generate_function_on_highorderbinary(n_variable, highest_order, random_seed=eval_seed)
-	output_data = torch.from_numpy(highorder_interaction_function(input_data, interaction_coef).astype(np.float32))
+	output_data = torch.from_numpy(highorder_interaction_function(input_data, interaction_coef).astype(np.float32)).unsqueeze(1)
 	input_data = torch.from_numpy(input_data)
 	data_ind = range(output_data.size()[0])
 	train_ind = data_ind[:n_train]
-	test_ind = data_ind[n_train]
+	test_ind = data_ind[n_train:]
 	train_input = input_data[train_ind]
 	train_output = output_data[train_ind]
 	test_input = input_data[test_ind]

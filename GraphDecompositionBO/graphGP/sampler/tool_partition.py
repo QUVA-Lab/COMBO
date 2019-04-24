@@ -153,6 +153,17 @@ def neighbor_partitions(sorted_partition, ind):
 	return neighbors
 
 
+def ind_to_perturb(sorted_partition, categories):
+	log_prob_subsets = np.log(np.array([np.sum(np.log(categories[subset])) for subset in sorted_partition]))
+	gumbel_max_rv_subsets = np.argmax(-np.log(-np.log(np.random.uniform(0, 1, log_prob_subsets.shape))) + log_prob_subsets)
+	if len(sorted_partition[gumbel_max_rv_subsets]) == 1:
+		return sorted_partition[gumbel_max_rv_subsets][0]
+	else:
+		log_prob_ind = np.log(np.log(categories[sorted_partition[gumbel_max_rv_subsets]]))
+		gumbel_max_rv_ind = np.argmax(-np.log(-np.log(np.random.uniform(0, 1, log_prob_ind.shape))) + log_prob_ind)
+		return sorted_partition[gumbel_max_rv_subsets][gumbel_max_rv_ind]
+
+
 if __name__ == '__main__':
 	n_vars_ = 50
 	n_data_ = 60

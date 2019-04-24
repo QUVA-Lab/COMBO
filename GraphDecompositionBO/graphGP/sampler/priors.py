@@ -1,6 +1,5 @@
 import numpy as np
-
-import torch
+from scipy.special import gammaln
 
 from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_group_size
 
@@ -32,7 +31,7 @@ def log_prior_constmean(constmean, output_min, output_max):
 
 
 def log_prior_noisevar(log_noise_var):
-	if log_noise_var < LOG_LOWER_BND or log_noise_var > 16:
+	if log_noise_var < LOG_LOWER_BND or LOG_UPPER_BND < log_noise_var or log_noise_var > 16:
 		return -float('inf')
 	return np.log(np.log(1.0 + (0.1 / np.exp(log_noise_var)) ** 2))
 
@@ -43,15 +42,23 @@ def log_prior_kernelamp(log_amp):
 	return -0.5 * 0.25 * log_amp ** 2
 
 
-def log_prior_edgeweight(log_beta_ind):
+def log_prior_edgeweight(log_beta_i, dim):
 	'''
-	:param log_beta_ind: numeric(float), ind-th element of 'log_beta'
+	:param log_beta_i: numeric(float), ind-th element of 'log_beta'
 	:return: numeric(float)
 	'''
-	if np.exp(log_beta_ind) > 2.0:
+	# Gamma prior
+	shape = 1.0
+	rate = 1.0 / dim ** 0.5
+	if log_beta_i > LOG_UPPER_BND or np.exp(log_beta_i) > 2.0:
 		return -float('inf')
-	else:
-		return np.log(1.0 / 2.0)
+	beta_i = np.exp(log_beta_i)
+	return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * beta_i - rate * beta_i
+	#
+	# if log_beta_i > LOG_UPPER_BND or np.exp(log_beta_i) > 2.0:
+	# 	return -float('inf')
+	# else:
+	# 	return np.log(1.0 / 2.0)
 
 
 def log_prior_partition(sorted_partition, categories):
@@ -62,7 +69,7 @@ def log_prior_partition(sorted_partition, categories):
 	:param sorted_partition:
 	:return:
 	'''
-	if compute_group_size(sorted_partition=sorted_partition, categories=categories) > GRAPH_SIZE_LIMIT:
+	if len(sorted_partition) == 1 or compute_group_size(sorted_partition=sorted_partition, categories=categories) > GRAPH_SIZE_LIMIT:
 		return -float('inf')
 	else:
 		prob_mass = np.array([np.sum(np.log(categories[subset])) for subset in sorted_partition])

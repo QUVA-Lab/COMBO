@@ -31,22 +31,15 @@ def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacen
     n_pre = updated_subset.index(ind)
     n_suf = len(updated_subset) - n_pre - 1
     if n_pre > 0:
-        if n_pre > 1:
-            prefix = strong_product(list_of_adjacency=list_of_adjacency, beta=torch.exp(log_beta), subset=updated_subset[:n_pre])
-        else:
-            prefix = list_of_adjacency[updated_subset[0]]
+        prefix = strong_product(list_of_adjacency=list_of_adjacency, beta=torch.exp(log_beta), subset=updated_subset[:n_pre]) if n_pre > 1 else list_of_adjacency[updated_subset[0]]
         prefix_id_added = prefix + torch.diag(prefix.new_ones(prefix.size(0)))
     else:
         prefix_id_added = None
     if n_suf > 0:
-        if n_suf > 1:
-            suffix = strong_product(list_of_adjacency=list_of_adjacency, beta=torch.exp(log_beta), subset=updated_subset[-n_suf:])
-        else:
-            suffix = list_of_adjacency[updated_subset[-1]]
+        suffix = strong_product(list_of_adjacency=list_of_adjacency, beta=torch.exp(log_beta), subset=updated_subset[-n_suf:]) if n_suf > 1 else list_of_adjacency[updated_subset[-1]]
         suffix_id_added = suffix + torch.diag(suffix.new_ones(suffix.size(0)))
     else:
         suffix_id_added = None
-    id_for_updated_adj_mat = torch.diag(list_of_adjacency[ind].new_ones(list_of_adjacency[ind].size(0)))
 
     model.kernel.fourier_freq_list = fourier_freq_list
     model.kernel.fourier_basis_list = fourier_basis_list
@@ -54,33 +47,42 @@ def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacen
     grouped_input_data = group_input(input_data=input_data, sorted_partition=sorted_partition, unit_in_group=unit_in_group)
     inference = Inference(train_data=(grouped_input_data, output_data), model=model)
 
-    # numerical_buffer is added for numerical stability in eigendecomposition and subtracted later
-    numerical_buffer = 1.0
-    def logp(log_beta_ind):
+    def logp(log_beta_i):
         '''
         Note that model.kernel members (fourier_freq_list, fourier_basis_list) are updated.
-        :param log_beta_ind: numeric(float)
+        :param log_beta_i: numeric(float)
         :return: numeric(float)
         '''
-        log_prior = log_prior_edgeweight(log_beta_ind)
+        log_prior = log_prior_edgeweight(log_beta_i, dim=input_data.size(1))
         if np.isinf(log_prior):
             return log_prior
-        adj_id_added = list_of_adjacency[ind] * np.exp(log_beta_ind) + id_for_updated_adj_mat
-        if prefix_id_added is not None:
-            adj_id_added = kronecker(prefix_id_added, adj_id_added)
-        if suffix_id_added is not None:
-            adj_id_added = kronecker(adj_id_added, suffix_id_added)
-        # D(id_added) - A(id_added) = D(original) - A(original)
-        laplacian = torch.diag(torch.sum(adj_id_added, dim=0) + numerical_buffer) - adj_id_added
-        fourier_freq_buffer, fourier_basis = torch.symeig(laplacian, eigenvectors=True)
-        model.kernel.fourier_freq_list[updated_subset_ind] = (fourier_freq_buffer - numerical_buffer).clamp(min=0)
+        fourier_freq, fourier_basis = fourier_update(adj_mat=list_of_adjacency[ind], log_beta_i=log_beta_i, prefix_id_added=prefix_id_added, suffix_id_added=suffix_id_added)
+        model.kernel.fourier_freq_list[updated_subset_ind] = fourier_freq
         model.kernel.fourier_basis_list[updated_subset_ind] = fourier_basis
-        return log_prior - float(inference.negative_log_likelihood(hyper=model.param_to_vec()))
+        log_likelihood = float(-inference.negative_log_likelihood(hyper=model.param_to_vec()))
+        return log_prior + log_likelihood
 
     x0 = float(log_beta[ind])
     x1 = univariate_slice_sampling(logp, x0)
     log_beta[ind] = x1
+    fourier_components = fourier_update(adj_mat=list_of_adjacency[ind], log_beta_i=log_beta[ind], prefix_id_added=prefix_id_added, suffix_id_added=suffix_id_added)
+    model.kernel.fourier_freq_list[updated_subset_ind] = fourier_components[0]
+    model.kernel.fourier_basis_list[updated_subset_ind] = fourier_components[1]
     return log_beta, model.kernel.fourier_freq_list, model.kernel.fourier_basis_list
+
+
+def fourier_update(adj_mat, log_beta_i, prefix_id_added, suffix_id_added):
+    # numerical_buffer is added for numerical stability in eigendecomposition and subtracted later
+    numerical_buffer = 1.0
+    adj_id_added = adj_mat * np.exp(log_beta_i) + torch.diag(adj_mat.new_ones(adj_mat.size(0)))
+    if prefix_id_added is not None:
+        adj_id_added = kronecker(prefix_id_added, adj_id_added)
+    if suffix_id_added is not None:
+        adj_id_added = kronecker(adj_id_added, suffix_id_added)
+    # D(id_added) - A(id_added) = D(original) - A(original)
+    laplacian = torch.diag(torch.sum(adj_id_added, dim=0) + numerical_buffer) - adj_id_added
+    fourier_freq_buffer, fourier_basis = torch.symeig(laplacian, eigenvectors=True)
+    return (fourier_freq_buffer - numerical_buffer).clamp(min=0), fourier_basis
 
 
 if __name__ == '__main__':

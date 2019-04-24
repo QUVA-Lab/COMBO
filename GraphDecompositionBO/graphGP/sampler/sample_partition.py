@@ -31,19 +31,18 @@ def gibbs_partition(model, input_data, output_data, categories, list_of_adjacenc
 	#        As long as subset does not contain ind, it is reusable.
 	#        check below try and except, in which checking that ind belongs a subset should be checked
 	eigen_decompositions = {}
-	for subset, fourier_freq, fourier_basis in zip(sorted_partition, fourier_freq_list, fourier_basis_list):
-		eigen_decompositions[tuple(subset)] = (fourier_freq, fourier_basis)
+	for s in range(len(sorted_partition)):
+		eigen_decompositions[tuple(sorted_partition[s])] = (fourier_freq_list[s], fourier_basis_list[s])
 	inference = Inference(train_data=(None, output_data), model=model)
 	for cand_sorted_partition in candidate_sorted_partitions:
 		log_prior = log_prior_partition(sorted_partition=cand_sorted_partition, categories=categories)
 		if np.isinf(log_prior):
 			unnormalized_log_posterior.append(log_prior)
 		else:
-			unit_in_group = compute_unit_in_group(sorted_partition=cand_sorted_partition, categories=categories)
-			grouped_input_data = group_input(input_data=input_data, sorted_partition=cand_sorted_partition, unit_in_group=unit_in_group)
 			fourier_freq_list = []
 			fourier_basis_list = []
-			for subset in cand_sorted_partition:
+			for s in range(len(cand_sorted_partition)):
+				subset = cand_sorted_partition[s]
 				try:
 					fourier_freq, fourier_basis = eigen_decompositions[tuple(subset)]
 				except KeyError:
@@ -54,6 +53,8 @@ def gibbs_partition(model, input_data, output_data, categories, list_of_adjacenc
 					eigen_decompositions[tuple(subset)] = (fourier_freq, fourier_basis)
 				fourier_freq_list.append(fourier_freq)
 				fourier_basis_list.append(fourier_basis)
+			unit_in_group = compute_unit_in_group(sorted_partition=cand_sorted_partition, categories=categories)
+			grouped_input_data = group_input(input_data=input_data, sorted_partition=cand_sorted_partition, unit_in_group=unit_in_group)
 			inference.train_x = grouped_input_data
 			model.kernel.fourier_freq_list = fourier_freq_list
 			model.kernel.fourier_basis_list = fourier_basis_list
@@ -66,10 +67,14 @@ def gibbs_partition(model, input_data, output_data, categories, list_of_adjacenc
 
 	fourier_freq_list = []
 	fourier_basis_list = []
-	for subset in sampled_sorted_partition:
+	for s in range(len(sampled_sorted_partition)):
+		subset = sampled_sorted_partition[s]
 		fourier_freq, fourier_basis = eigen_decompositions[tuple(subset)]
 		fourier_freq_list.append(fourier_freq)
 		fourier_basis_list.append(fourier_basis)
+	# Update (fourier_freq_list, fourier_basis_list) with a new sample
+	model.kernel.fourier_freq_list = fourier_freq_list
+	model.kernel.fourier_basis_list = fourier_basis_list
 	return sampled_sorted_partition, fourier_freq_list, fourier_basis_list
 
 

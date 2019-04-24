@@ -75,7 +75,7 @@ def accept(logp, x0, x1, slice_h, width, lower, upper, llh_record):
         try:
             logp_upper = llh_record[float(upper)]
         except KeyError:
-            logp_upper = logp(lower)
+            logp_upper = logp(upper)
             llh_record[float(upper)] = logp_upper
         if acceptance and slice_h >= logp_lower and slice_h >= logp_upper:
             return False
