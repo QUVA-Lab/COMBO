@@ -39,7 +39,8 @@ def log_prior_noisevar(log_noise_var):
 def log_prior_kernelamp(log_amp):
 	if log_amp < LOG_LOWER_BND or LOG_UPPER_BND < log_amp:
 		return -float('inf')
-	return -0.5 * 0.25 * log_amp ** 2
+	# return -0.5 * 0.25 * log_amp ** 2
+	return 0
 
 
 def log_prior_edgeweight(log_beta_i, dim):
@@ -49,13 +50,13 @@ def log_prior_edgeweight(log_beta_i, dim):
 	'''
 	# Gamma prior
 	shape = 1.0
-	rate = 1.0 / dim ** 0.5
-	if log_beta_i > LOG_UPPER_BND or np.exp(log_beta_i) > 2.0:
+	rate = 1.0# / dim ** 0.5
+	if log_beta_i < LOG_LOWER_BND or LOG_UPPER_BND < log_beta_i or np.exp(log_beta_i) > 2.0:
 		return -float('inf')
 	beta_i = np.exp(log_beta_i)
 	return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * beta_i - rate * beta_i
 	#
-	# if log_beta_i > LOG_UPPER_BND or np.exp(log_beta_i) > 2.0:
+	# if og_beta_i < LOG_LOWER_BND or LOG_UPPER_BND < log_beta_i or np.exp(log_beta_i) > 2.0:
 	# 	return -float('inf')
 	# else:
 	# 	return np.log(1.0 / 2.0)

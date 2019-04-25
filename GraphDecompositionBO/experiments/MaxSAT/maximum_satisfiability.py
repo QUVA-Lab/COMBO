@@ -14,9 +14,12 @@ class MaxSAT(object):
 		self.nbvar = int(line_str.split(' ')[2])
 		self.nbclause = int(line_str.split(' ')[3])
 		clauses = [(float(clause_str.split(' ')[0]), clause_str.split(' ')[1:-1]) for clause_str in f.readlines()]
-		self.weights = np.array([elm[0] for elm in clauses])
-		self.clauses = [([abs(int(elm)) - 1 for elm in clause], [int(elm) > 0 for elm in clause]) for weight, clause in clauses]
 		f.close()
+		weights = np.array([elm[0] for elm in clauses]).astype(np.float32)
+		weight_mean = np.mean(weights)
+		weight_std = np.std(weights)
+		self.weights = (weights - weight_mean) / weight_std
+		self.clauses = [([abs(int(elm)) - 1 for elm in clause], [int(elm) > 0 for elm in clause]) for _, clause in clauses]
 
 		self.suggested_init = torch.empty(0).long()
 		self.suggested_init = torch.cat([self.suggested_init, sample_init_points([2] * self.nbvar, 20 - self.suggested_init.size(0), random_seed).long()], dim=0)
@@ -27,7 +30,7 @@ class MaxSAT(object):
 			x = x.squeeze(0)
 		x_np = (x.cpu() if x.is_cuda else x).numpy().astype(np.bool)
 		satisfied = np.array([(x_np[clause[0]] == clause[1]).any() for clause in self.clauses])
-		return np.sum(self.weights * satisfied)
+		return np.sum(self.weights * satisfied) * x.float().new_ones(1, 1)
 
 
 if __name__ == '__main__':
