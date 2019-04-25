@@ -85,13 +85,15 @@ def slice_kernelamp(inference):
 	:param inference:
 	:return:
 	'''
-
+	output_var = torch.var(inference.train_y).item()
+	kernel_min = np.prod([torch.mean(torch.exp(-fourier_freq[-1])).item() / torch.mean(torch.exp(-fourier_freq)).item() for fourier_freq in inference.model.kernel.fourier_freq_list])
+	kernel_max = np.prod([torch.mean(torch.exp(-fourier_freq[0])).item() / torch.mean(torch.exp(-fourier_freq)).item() for fourier_freq in inference.model.kernel.fourier_freq_list])
 	def logp(log_amp):
 		'''
 		:param log_amp: numeric(float)
 		:return: numeric(float)
 		'''
-		log_prior = log_prior_kernelamp(log_amp)
+		log_prior = log_prior_kernelamp(log_amp, output_var, kernel_min, kernel_max)
 		if np.isinf(log_prior):
 			return log_prior
 		inference.model.kernel.log_amp.fill_(log_amp)

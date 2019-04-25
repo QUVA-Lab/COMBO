@@ -6,8 +6,6 @@ import progressbar
 import numpy as np
 import matplotlib.pyplot as plt
 
-LOG_2 = np.log(2)
-
 import torch
 
 from GraphDecompositionBO.graphGP.sampler.sample_hyper import slice_hyper
@@ -187,7 +185,7 @@ def evaluate_sample(model, train_input, train_output, test_input, test_output, c
 
 
 def gaussian_log_likelihood(data, mean, var):
-	return -0.5 * LOG_2 - 0.5 * torch.log(np.pi * var) - 0.5 * (data - mean) ** 2 / var
+	return -0.5 * np.log(2) - 0.5 * torch.log(np.pi * var) - 0.5 * (data - mean) ** 2 / var
 
 
 def GP_regression_sampling(data_type, train_data_scale, n_sample, n_thin, n_burn, random_seed, learn_decomposition):
@@ -227,39 +225,48 @@ def GP_regression_sampling(data_type, train_data_scale, n_sample, n_thin, n_burn
 	return mll, pll
 
 
+def run_sampling(data_type, train_data_scale, n_sample, n_thin, n_burn, random_seed, learn_decomposition):
+	exp_info_str = '%d data type - %d train data scale' % (data_type, train_data_scale)
+	exp_info_str += '\n%d samples / %d thin / %d burn-in %s' % (n_sample, n_thin, n_burn, '/ Learn Decomposition' if learn_decomposition else '')
+	print(exp_info_str)
+	n_repeat = 1
+	mll_list_ = []
+	pll_list_ = []
+	for _ in range(n_repeat):
+		mll_, pll_ = GP_regression_sampling(data_type, train_data_scale, n_sample, n_thin, n_burn, random_seed, learn_decomposition)
+		mll_list_.append(mll_)
+		pll_list_.append(pll_)
+	result_str_ = '\n'.join([('          %+12.4f | %+12.4f' % (mll_, pll_)) for mll_, pll_ in zip(mll_list_, pll_list_)])
+	result_str_ += '\nMean :    %+12.4f | %+12.4f' % (np.mean(mll_list_), np.mean(pll_list_))
+	result_str_ += '\nStd.Err : %12.4f | %12.4f' % (np.std(mll_list_) / n_repeat ** 0.5, np.std(pll_list_) / n_repeat ** 0.5)
+	result_str_ += '\nMedian  : %+12.4f | %+12.4f' % (np.median(mll_list_), np.median(pll_list_))
+	print(exp_info_str)
+	print(result_str_)
+
+
 if __name__ == '__main__':
 	parser_ = argparse.ArgumentParser(description='GOLD : Gaussian Process Regression')
 	parser_.add_argument('--data_type', dest='data_type', type=int)
 	parser_.add_argument('--train_data_scale', dest='train_data_scale', type=int)
-	parser_.add_argument('--n_sample', dest='n_sample', type=int, default=50)
+	parser_.add_argument('--n_sample', dest='n_sample', type=int, default=10)
 	parser_.add_argument('--n_thin', dest='n_thin', type=int, default=2)
 	parser_.add_argument('--n_burn', dest='n_burn', type=int, default=10)
 	parser_.add_argument('--random_seed', dest='random_seed', type=int, default=1)
 	parser_.add_argument('--learn_decomposition', dest='learn_decomposition', action='store_true', default=False)
 	args_ = parser_.parse_args()
 
-	if args_.data_type is None:
-		args_.data_type = 2
-	if args_.train_data_scale is None:
-		args_.train_data_scale = 4
-	if args_.random_seed is None:
-		args_.random_seed = 1
-	args_.learn_decomposition = True
+	run_sampling(data_type=1, train_data_scale=1, n_sample=10, n_thin=2, n_burn=20, random_seed=1, learn_decomposition=False)
+	run_sampling(data_type=1, train_data_scale=1, n_sample=10, n_thin=2, n_burn=20, random_seed=1, learn_decomposition=True)
+	run_sampling(data_type=1, train_data_scale=3, n_sample=10, n_thin=2, n_burn=20, random_seed=1, learn_decomposition=False)
+	run_sampling(data_type=1, train_data_scale=3, n_sample=10, n_thin=2, n_burn=20, random_seed=1, learn_decomposition=True)
 
-	exp_info_str = '%d data type - %d train data scale' % (args_.data_type, args_.train_data_scale)
-	exp_info_str += '\n%d samples / %d thin / %d burn-in %s' % (args_.n_sample, args_.n_thin, args_.n_burn, '/ Learn Decomposition' if args_.learn_decomposition else '')
-	print(exp_info_str)
-	n_repeat = 1
-	mll_list_ = []
-	pll_list_ = []
-	for _ in range(n_repeat):
-		mll_, pll_ = GP_regression_sampling(**vars(args_))
-		mll_list_.append(mll_)
-		pll_list_.append(pll_)
-	result_str_ = '\n'.join([('          %+12.4f | %+12.4f' % (mll_, pll_)) for mll_, pll_ in zip(mll_list_, pll_list_)])
-	result_str_ += '\nMean :    %+12.4f | %+12.4f' % (np.mean(mll_list_), np.mean(pll_list_))
-	result_str_ += '\nStd.Err : %12.4f | %12.4f' % (
-	np.std(mll_list_) / n_repeat ** 0.5, np.std(pll_list_) / n_repeat ** 0.5)
-	result_str_ += '\nMedian  : %+12.4f | %+12.4f' % (np.median(mll_list_), np.median(pll_list_))
-	print(exp_info_str)
-	print(result_str_)
+	run_sampling(data_type=2, train_data_scale=1, n_sample=10, n_thin=2, n_burn=20, random_seed=1, learn_decomposition=False)
+	run_sampling(data_type=2, train_data_scale=1, n_sample=10, n_thin=2, n_burn=20, random_seed=1, learn_decomposition=True)
+	run_sampling(data_type=2, train_data_scale=3, n_sample=10, n_thin=2, n_burn=20, random_seed=1, learn_decomposition=False)
+	run_sampling(data_type=2, train_data_scale=3, n_sample=10, n_thin=2, n_burn=20, random_seed=1, learn_decomposition=True)
+
+	# run_sampling(data_type=3, train_data_scale=1, n_sample=50, n_thin=1, n_burn=10, random_seed=1, learn_decomposition=False)
+	# run_sampling(data_type=3, train_data_scale=1, n_sample=50, n_thin=1, n_burn=10, random_seed=1, learn_decomposition=True)
+	# run_sampling(data_type=3, train_data_scale=3, n_sample=50, n_thin=2, n_burn=10, random_seed=1, learn_decomposition=False)
+	# run_sampling(data_type=3, train_data_scale=3, n_sample=50, n_thin=2, n_burn=10, random_seed=1, learn_decomposition=True)
+

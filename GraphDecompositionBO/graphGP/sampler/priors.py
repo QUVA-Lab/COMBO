@@ -27,36 +27,51 @@ def log_prior_constmean(constmean, output_min, output_max):
 	# Unstable parameter in sampling
 	if constmean < output_mid - stable_dev or output_mid + stable_dev < constmean:
 		return -float('inf')
-	return 0
+	# Uniform prior
+	# return 0
+	# Truncated Gaussian
+	return -np.log(stable_dev / 2.0) - 0.5 * (constmean - output_mid) ** 2 / (stable_dev / 2.0) ** 2
 
 
 def log_prior_noisevar(log_noise_var):
-	if log_noise_var < LOG_LOWER_BND or LOG_UPPER_BND < log_noise_var or log_noise_var > 16:
+	if log_noise_var < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(10000.0)) < log_noise_var:
 		return -float('inf')
 	return np.log(np.log(1.0 + (0.1 / np.exp(log_noise_var)) ** 2))
 
 
-def log_prior_kernelamp(log_amp):
-	if log_amp < LOG_LOWER_BND or LOG_UPPER_BND < log_amp:
+def log_prior_kernelamp(log_amp, output_var, kernel_min, kernel_max):
+	if log_amp < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(10000.0)) < log_amp:
 		return -float('inf')
-	# return -0.5 * 0.25 * log_amp ** 2
-	return 0
+	amp = np.exp(log_amp)
+	# LogNormal
+	log_amp_lower = np.log(output_var / kernel_max)
+	log_amp_upper = np.log(output_var / kernel_min)
+	log_amp_mid = 0.5 * (log_amp_upper + log_amp_lower)
+	log_amp_std = 0.5 * (log_amp_upper - log_amp_lower) / 2.0
+	return -np.log(log_amp_std) - 0.5 * (log_amp - log_amp_mid) ** 2 / log_amp_std ** 2
+	# return
+	# Uniform
+	# return 0 if kernel_min < output_var / amp < kernel_max else -float('inf')
+	# Gamma
+	# shape = output_var
+	# rate = 1.0
+	# return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * log_amp - rate * np.exp(log_amp)
 
 
-def log_prior_edgeweight(log_beta_i, dim):
+def log_prior_edgeweight(log_beta_i, ind, sorted_partition):
 	'''
 	:param log_beta_i: numeric(float), ind-th element of 'log_beta'
 	:return: numeric(float)
 	'''
 	# Gamma prior
+	updated_subset_ind = [(ind in subset) for subset in sorted_partition].index(True)
 	shape = 1.0
-	rate = 1.0# / dim ** 0.5
-	if log_beta_i < LOG_LOWER_BND or LOG_UPPER_BND < log_beta_i or np.exp(log_beta_i) > 2.0:
+	rate = 1.0 / len(sorted_partition) ** 0.5
+	if log_beta_i < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(10000.0)) < log_beta_i:
 		return -float('inf')
-	beta_i = np.exp(log_beta_i)
-	return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * beta_i - rate * beta_i
-	#
-	# if og_beta_i < LOG_LOWER_BND or LOG_UPPER_BND < log_beta_i or np.exp(log_beta_i) > 2.0:
+	return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * log_beta_i - rate * np.exp(log_beta_i)
+	# Uniform prior
+	# if og_beta_i < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(2.0)) < log_beta_i:
 	# 	return -float('inf')
 	# else:
 	# 	return np.log(1.0 / 2.0)

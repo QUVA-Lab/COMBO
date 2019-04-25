@@ -53,7 +53,7 @@ def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacen
         :param log_beta_i: numeric(float)
         :return: numeric(float)
         '''
-        log_prior = log_prior_edgeweight(log_beta_i, dim=input_data.size(1))
+        log_prior = log_prior_edgeweight(log_beta_i, ind=ind, sorted_partition=sorted_partition)
         if np.isinf(log_prior):
             return log_prior
         fourier_freq, fourier_basis = fourier_update(adj_mat=list_of_adjacency[ind], log_beta_i=log_beta_i, prefix_id_added=prefix_id_added, suffix_id_added=suffix_id_added)
