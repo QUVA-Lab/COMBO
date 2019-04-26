@@ -11,7 +11,7 @@ import torch
 from GraphDecompositionBO.graphGP.sampler.sample_hyper import slice_hyper
 from GraphDecompositionBO.graphGP.sampler.sample_edgeweight import slice_edgeweight
 from GraphDecompositionBO.graphGP.sampler.sample_partition import gibbs_partition
-from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_unit_in_group, group_input, ind_to_perturb
+from GraphDecompositionBO.graphGP.sampler.tool_partition import group_input, ind_to_perturb, strong_product
 
 from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
 from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
@@ -20,13 +20,13 @@ from GraphDecompositionBO.graphGP.inference.inference import Inference
 from GraphDecompositionBO.experiments.GP_ablation.data_loader import load_highorderbinary, load_maxsat
 
 
-def COMBO_GP_sample(model, input_data, output_data, categories, list_of_adjacency, log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
+def COMBO_GP_sample(model, input_data, output_data, n_vertex, adj_mat_list, log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
 	'''
 	:param model:
 	:param input_data:
 	:param output_data:
-	:param categories:  1d np.array
-	:param list_of_adjacency:
+	:param n_vertex:  1d np.array
+	:param adj_mat_list:
 	:param log_beta:
 	:param sorted_partition:
 	:param n_sample:
@@ -35,48 +35,51 @@ def COMBO_GP_sample(model, input_data, output_data, categories, list_of_adjacenc
 
 	:return:
 	'''
-	sample_hyper = []
-	sample_log_beta = []
-	sample_partition = []
-	sample_freq = []
-	sample_basis = []
+	hyper_samples = []
+	log_beta_samples = []
+	partition_samples = []
+	freq_samples = []
+	basis_samples = []
+	edge_mat_samples = []
 
 	log_beta_sample = log_beta
 	fourier_freq_list = model.kernel.fourier_freq_list
 	fourier_basis_list = model.kernel.fourier_basis_list
+	edge_mat_list = [strong_product(adj_mat_list, input_data.new_ones(len(adj_mat_list)), subset) for subset in sorted_partition]
 
 	bar = progressbar.ProgressBar(max_value=n_sample * n_thin + n_burn)
 	for s in range(n_sample * n_thin + n_burn):
-		slice_hyper(model=model, input_data=input_data, output_data=output_data, categories=categories, sorted_partition=sorted_partition)
+		slice_hyper(model=model, input_data=input_data, output_data=output_data, n_vertex=n_vertex, sorted_partition=sorted_partition)
 
-		shuffled_beta_ind = range(len(list_of_adjacency))
+		shuffled_beta_ind = range(len(adj_mat_list))
 		np.random.shuffle(shuffled_beta_ind)
 		for beta_ind in shuffled_beta_ind:
 			# In each sampler, model.kernel fourier_freq_list, fourier_basis_list are updated.
 			slice_tuple = slice_edgeweight(model=model, input_data=input_data, output_data=output_data,
-			                               categories=categories, list_of_adjacency=list_of_adjacency,
+			                               n_vertex=n_vertex, adj_mat_list=adj_mat_list,
 			                               log_beta=log_beta_sample, sorted_partition=sorted_partition,
 			                               fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
 			                               ind=beta_ind)
 			log_beta_sample, fourier_freq_list, fourier_basis_list = slice_tuple
-		if s >= n_burn and (s + 1) % n_thin == 0:
-			sample_hyper.append(model.param_to_vec())
-			sample_log_beta.append(log_beta_sample.clone())
-			sample_partition.append(copy.deepcopy(sorted_partition))
-			sample_freq.append([elm.clone() for elm in fourier_freq_list])
-			sample_basis.append([elm.clone() for elm in fourier_basis_list])
+		if s >= n_burn and (s - n_burn + 1) % n_thin == 0:
+			hyper_samples.append(model.param_to_vec())
+			log_beta_samples.append(log_beta_sample.clone())
+			partition_samples.append(copy.deepcopy(sorted_partition))
+			freq_samples.append([elm.clone() for elm in fourier_freq_list])
+			basis_samples.append([elm.clone() for elm in fourier_basis_list])
+			edge_mat_samples.append([elm.clone() for elm in edge_mat_list])
 		bar.update(value=s + 1)
 		sys.stdout.flush()
-	return sample_hyper, sample_log_beta, sample_partition, sample_freq, sample_basis
+	return hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples
 
 
-def GOLD_GP_sample(model, input_data, output_data, categories, list_of_adjacency, log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
+def GOLD_GP_sample(model, input_data, output_data, n_vertex, adj_mat_list, log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
 	'''
 	:param model:
 	:param input_data:
 	:param output_data:
-	:param categories:  1d np.array
-	:param list_of_adjacency:
+	:param n_vertex:  1d np.array
+	:param adj_mat_list:
 	:param log_beta:
 	:param sorted_partition:
 	:param n_sample:
@@ -85,16 +88,18 @@ def GOLD_GP_sample(model, input_data, output_data, categories, list_of_adjacency
 
 	:return:
 	'''
-	sample_hyper = []
-	sample_log_beta = []
-	sample_partition = []
-	sample_freq = []
-	sample_basis = []
+	hyper_samples = []
+	log_beta_samples = []
+	partition_samples = []
+	freq_samples = []
+	basis_samples = []
+	edge_mat_samples = []
 
 	partition_sample = sorted_partition
 	log_beta_sample = log_beta
 	fourier_freq_list = model.kernel.fourier_freq_list
 	fourier_basis_list = model.kernel.fourier_basis_list
+	edge_mat_list = [strong_product(adj_mat_list, input_data.new_ones(len(adj_mat_list)), subset) for subset in sorted_partition]
 
 	shuffled_partition_ind = []
 	bar = progressbar.ProgressBar(max_value=n_sample * n_thin + n_burn)
@@ -104,65 +109,63 @@ def GOLD_GP_sample(model, input_data, output_data, categories, list_of_adjacency
 		# Thus, when multiple points are sampled, sweeping all inds for each sample may be not a good practice
 		# For example if there are 50 variables and 10 samples are needed, then after shuffling indices, and 50/10 thinning can be used.
 		if len(shuffled_partition_ind) == 0:
-			shuffled_partition_ind = range(len(list_of_adjacency))
+			shuffled_partition_ind = range(len(adj_mat_list))
 			np.random.shuffle(shuffled_partition_ind)
-		partition_ind = ind_to_perturb(sorted_partition=partition_sample, categories=categories)
+		partition_ind = ind_to_perturb(sorted_partition=partition_sample, n_vertex=n_vertex)
 		# partition_ind = shuffled_partition_ind.pop()
 		gibbs_tuple = gibbs_partition(model=model, input_data=input_data, output_data=output_data,
-		                              categories=categories, list_of_adjacency=list_of_adjacency,
+		                              n_vertex=n_vertex, adj_mat_list=adj_mat_list,
 		                              log_beta=log_beta_sample, sorted_partition=partition_sample,
 		                              fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
-		                              ind=partition_ind)
-		partition_sample, fourier_freq_list, fourier_basis_list = gibbs_tuple
-		slice_hyper(model=model, input_data=input_data, output_data=output_data, categories=categories, sorted_partition=partition_sample)
+		                              edge_mat_list=edge_mat_list, ind=partition_ind)
+		partition_sample, fourier_freq_list, fourier_basis_list, edge_mat_list = gibbs_tuple
+		slice_hyper(model=model, input_data=input_data, output_data=output_data, n_vertex=n_vertex, sorted_partition=partition_sample)
 
-		shuffled_beta_ind = range(len(list_of_adjacency))
+		shuffled_beta_ind = range(len(adj_mat_list))
 		np.random.shuffle(shuffled_beta_ind)
 		for beta_ind in shuffled_beta_ind:
 			# In each sampler, model.kernel fourier_freq_list, fourier_basis_list are updated.
 			slice_tuple = slice_edgeweight(model=model, input_data=input_data, output_data=output_data,
-			                               categories=categories, list_of_adjacency=list_of_adjacency,
+			                               n_vertex=n_vertex, adj_mat_list=adj_mat_list,
 			                               log_beta=log_beta_sample, sorted_partition=partition_sample,
 			                               fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
 			                               ind=beta_ind)
 			log_beta_sample, fourier_freq_list, fourier_basis_list = slice_tuple
-		if s >= n_burn and (s + 1) % n_thin == 0:
-			sample_hyper.append(model.param_to_vec())
-			sample_log_beta.append(log_beta_sample.clone())
-			sample_partition.append(copy.deepcopy(partition_sample))
-			sample_freq.append([elm.clone() for elm in fourier_freq_list])
-			sample_basis.append([elm.clone() for elm in fourier_basis_list])
+		if s >= n_burn and (s - n_burn + 1) % n_thin == 0:
+			hyper_samples.append(model.param_to_vec())
+			log_beta_samples.append(log_beta_sample.clone())
+			partition_samples.append(copy.deepcopy(partition_sample))
+			freq_samples.append([elm.clone() for elm in fourier_freq_list])
+			basis_samples.append([elm.clone() for elm in fourier_basis_list])
+			edge_mat_samples.append([elm.clone() for elm in edge_mat_list])
 		bar.update(value=s + 1)
 		sys.stdout.flush()
-	return sample_hyper, sample_log_beta, sample_partition, sample_freq, sample_basis
+	return hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples
 
 
-def evaluate_sample(model, train_input, train_output, test_input, test_output, categories, sample_hyper,
-                    sample_log_beta, sample_partition, sample_freq, sample_basis):
-	assert len(sample_hyper) == len(sample_freq) == len(sample_basis)
-	n_sample = len(sample_hyper)
+def evaluate_sample(model, train_input, train_output, test_input, test_output, n_vertex, hyper_samples,
+                    log_beta_samples, partition_samples, freq_samples, basis_samples):
+	assert len(hyper_samples) == len(freq_samples) == len(basis_samples)
+	n_sample = len(hyper_samples)
 	train_mll_sum = 0
 	for i in range(n_sample):
-		model.kernel.fourier_freq_list = [elm.clone() for elm in sample_freq[i]]
-		model.kernel.fourier_basis_list = [elm.clone() for elm in sample_basis[i]]
-		unit_in_group = compute_unit_in_group(sorted_partition=sample_partition[i], categories=categories)
-		train_grouped_input = group_input(input_data=train_input, sorted_partition=sample_partition[i],
-		                                  unit_in_group=unit_in_group)
+		model.kernel.fourier_freq_list = [elm.clone() for elm in freq_samples[i]]
+		model.kernel.fourier_basis_list = [elm.clone() for elm in basis_samples[i]]
+		train_grouped_input = group_input(input_data=train_input, sorted_partition=partition_samples[i], n_vertex=n_vertex)
 		inference = Inference((train_grouped_input, train_output), model)
-		train_mll_sum += -inference.negative_log_likelihood(hyper=sample_hyper[i])
+		train_mll_sum += -inference.negative_log_likelihood(hyper=hyper_samples[i])
 	train_mll_avg = train_mll_sum / float(n_sample)
 
 	test_pll_sum = 0
 	test_pmean_sum = 0
 	test_pvar_sum = 0
 	for i in range(n_sample):
-		model.kernel.fourier_freq_list = [elm.clone() for elm in sample_freq[i]]
-		model.kernel.fourier_basis_list = [elm.clone() for elm in sample_basis[i]]
-		unit_in_group = compute_unit_in_group(sorted_partition=sample_partition[i], categories=categories)
-		train_grouped_input = group_input(input_data=train_input, sorted_partition=sample_partition[i], unit_in_group=unit_in_group)
-		test_grouped_input = group_input(input_data=test_input, sorted_partition=sample_partition[i], unit_in_group=unit_in_group)
+		model.kernel.fourier_freq_list = [elm.clone() for elm in freq_samples[i]]
+		model.kernel.fourier_basis_list = [elm.clone() for elm in basis_samples[i]]
+		train_grouped_input = group_input(input_data=train_input, sorted_partition=partition_samples[i], n_vertex=n_vertex)
+		test_grouped_input = group_input(input_data=test_input, sorted_partition=partition_samples[i], n_vertex=n_vertex)
 		inference = Inference((train_grouped_input, train_output), model)
-		test_sample_pred_mean, test_sample_pred_var = inference.predict(test_grouped_input, hyper=sample_hyper[i])
+		test_sample_pred_mean, test_sample_pred_var = inference.predict(test_grouped_input, hyper=hyper_samples[i])
 
 		test_pll_sum += gaussian_log_likelihood(test_output, test_sample_pred_mean, test_sample_pred_var)
 		test_pmean_sum += test_sample_pred_mean
@@ -178,7 +181,7 @@ def evaluate_sample(model, train_input, train_output, test_input, test_output, c
 	test_pll = torch.mean(test_pll_avg)
 	plt.errorbar(test_output.numpy(), test_pmean_avg.numpy(), fmt='b+', yerr=test_pvar_avg.numpy() ** 0.5, color='b', ecolor='g', alpha=0.5)
 	plt.scatter(train_output.numpy(), train_output.numpy(), s=60, facecolor='none', edgecolors='r')
-	plt.title(('(%d/%d) train MLL:%+2f, test PLL avg:%+.2f ' % (train_output.numel(), test_output.numel(), train_mll_avg.item(), test_pll.item())) + ('Learned' if sample_partition[0] != sample_partition[-1] else 'Fixed'))
+	plt.title(('(%d/%d) train MLL:%+2f, test PLL avg:%+.2f ' % (train_output.numel(), test_output.numel(), train_mll_avg.item(), test_pll.item())) + ('Learned' if partition_samples[0] != partition_samples[-1] else 'Fixed'))
 	plt.ylim([torch.min(train_output).item(), torch.max(train_output).item()])
 	plt.show()
 	return train_mll_avg, test_pll
@@ -193,18 +196,18 @@ def GP_regression_sampling(data_type, train_data_scale, n_sample, n_thin, n_burn
 	# dataset = load_maxsat(data_type=data_type, train_data_scale=train_data_scale, random_seed=random_seed)
 	(train_input, train_output), (test_input, test_output) = dataset
 	n_variables = train_input.size(1)
-	categories = np.array([2 for _ in range(n_variables)])
-	list_of_adjacency = []
+	n_vertex = np.array([2 for _ in range(n_variables)])
+	adj_mat_list = []
 	init_log_beta = torch.zeros(n_variables)
 	init_sorted_partition = [[m] for m in range(n_variables)]
 	# init_sorted_partition = [[0, 1], [2], [3], [4]]
-	categories = np.array([np.prod(categories[subset]) for subset in init_sorted_partition])
+	n_vertex = np.array([np.prod(n_vertex[subset]) for subset in init_sorted_partition])
 
 	fourier_freq_list = []
 	fourier_basis_list = []
 	for i in range(n_variables):
 		adjmat = torch.diag(torch.ones(1), -1) + torch.diag(torch.ones(1), 1)
-		list_of_adjacency.append(adjmat)
+		adj_mat_list.append(adjmat)
 		laplacian = torch.diag(torch.sum(adjmat, dim=0)) - adjmat
 		eigval, eigvec = torch.symeig(laplacian, eigenvectors=True)
 		fourier_freq_list.append(eigval)
@@ -216,11 +219,18 @@ def GP_regression_sampling(data_type, train_data_scale, n_sample, n_thin, n_burn
 
 	sampler = GOLD_GP_sample if learn_decomposition else COMBO_GP_sample
 	posterior_sample = sampler(model=model, input_data=train_input, output_data=train_output,
-	                           categories=categories, list_of_adjacency=list_of_adjacency,
+	                           n_vertex=n_vertex, adj_mat_list=adj_mat_list,
 	                           log_beta=init_log_beta, sorted_partition=init_sorted_partition,
 	                           n_sample=n_sample, n_burn=n_burn, n_thin=n_thin)
-	sample_hyper, sample_log_beta, sample_partition, sample_freq, sample_basis = posterior_sample
-	mll, pll = evaluate_sample(model, train_input, train_output, test_input, test_output, categories, sample_hyper, sample_log_beta, sample_partition, sample_freq, sample_basis)
+	hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples = posterior_sample
+
+	assert len(freq_samples) == len(basis_samples) == len(edge_mat_samples)
+	for s in range(len(freq_samples)):
+		assert len(freq_samples[s]) == len(basis_samples[s]) == len(edge_mat_samples[s])
+		for t in range(len(freq_samples[s])):
+			assert basis_samples[s][t].size() == edge_mat_samples[s][t].size()
+			assert freq_samples[s][t].size(0) == basis_samples[s][t].size(0) == basis_samples[s][t].size(1)
+	mll, pll = evaluate_sample(model, train_input, train_output, test_input, test_output, n_vertex, hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples)
 	print(' %+10.4f |    %+10.4f |' % (mll, pll))
 	return mll, pll
 

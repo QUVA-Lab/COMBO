@@ -7,7 +7,7 @@ from GraphDecompositionBO.graphGP.kernels.graphkernel import GraphKernel
 class DiffusionKernel(GraphKernel):
 	"""
 	Usually Graph Kernel means a kernel between graphs, here this kernel is a kernel between vertices on a graph
-	Edge scales are not included in the module, instead edge weights of each subgraphs is used to calculate frequencies (fourier_coef)
+	Edge scales are not included in the module, instead edge weights of each subgraphs is used to calculate frequencies (fourier_freq)
 	"""
 	def __init__(self, fourier_freq_list, fourier_basis_list):
 		super(DiffusionKernel, self).__init__(fourier_freq_list, fourier_basis_list)

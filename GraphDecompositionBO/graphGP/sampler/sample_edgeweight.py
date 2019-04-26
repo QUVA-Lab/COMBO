@@ -3,13 +3,12 @@ import numpy as np
 import torch
 
 from GraphDecompositionBO.graphGP.inference.inference import Inference
-from GraphDecompositionBO.graphGP.sampler.tool_partition import strong_product, kronecker
+from GraphDecompositionBO.graphGP.sampler.tool_partition import strong_product, kronecker, group_input
 from GraphDecompositionBO.graphGP.sampler.tool_slice_sampling import univariate_slice_sampling
-from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_unit_in_group, group_input
 from GraphDecompositionBO.graphGP.sampler.priors import log_prior_edgeweight
 
 
-def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacency, log_beta,
+def slice_edgeweight(model, input_data, output_data, n_vertex, adj_mat_list, log_beta,
                      sorted_partition, fourier_freq_list, fourier_basis_list, ind):
     '''
     Slice sampling the edgeweight(exp('log_beta')) at 'ind' in 'log_beta' vector
@@ -17,8 +16,8 @@ def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacen
     :param model:
     :param input_data:
     :param output_data:
-    :param categories: 1d np.array
-    :param list_of_adjacency: list of 2D torch.Tensor of adjacency matrix of base subgraphs
+    :param n_vertex: 1d np.array
+    :param adj_mat_list: list of 2D torch.Tensor of adjacency matrix of base subgraphs
     :param log_beta:
     :param sorted_partition: Partition of {0, ..., K-1}, list of subsets(list)
     :param fourier_freq_list:
@@ -31,20 +30,19 @@ def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacen
     n_pre = updated_subset.index(ind)
     n_suf = len(updated_subset) - n_pre - 1
     if n_pre > 0:
-        prefix = strong_product(list_of_adjacency=list_of_adjacency, beta=torch.exp(log_beta), subset=updated_subset[:n_pre]) if n_pre > 1 else list_of_adjacency[updated_subset[0]]
+        prefix = strong_product(adj_mat_list=adj_mat_list, beta=torch.exp(log_beta), subset=updated_subset[:n_pre]) if n_pre > 1 else adj_mat_list[updated_subset[0]]
         prefix_id_added = prefix + torch.diag(prefix.new_ones(prefix.size(0)))
     else:
         prefix_id_added = None
     if n_suf > 0:
-        suffix = strong_product(list_of_adjacency=list_of_adjacency, beta=torch.exp(log_beta), subset=updated_subset[-n_suf:]) if n_suf > 1 else list_of_adjacency[updated_subset[-1]]
+        suffix = strong_product(adj_mat_list=adj_mat_list, beta=torch.exp(log_beta), subset=updated_subset[-n_suf:]) if n_suf > 1 else adj_mat_list[updated_subset[-1]]
         suffix_id_added = suffix + torch.diag(suffix.new_ones(suffix.size(0)))
     else:
         suffix_id_added = None
 
     model.kernel.fourier_freq_list = fourier_freq_list
     model.kernel.fourier_basis_list = fourier_basis_list
-    unit_in_group = compute_unit_in_group(sorted_partition=sorted_partition, categories=categories)
-    grouped_input_data = group_input(input_data=input_data, sorted_partition=sorted_partition, unit_in_group=unit_in_group)
+    grouped_input_data = group_input(input_data=input_data, sorted_partition=sorted_partition, n_vertex=n_vertex)
     inference = Inference(train_data=(grouped_input_data, output_data), model=model)
 
     def logp(log_beta_i):
@@ -56,7 +54,7 @@ def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacen
         log_prior = log_prior_edgeweight(log_beta_i, ind=ind, sorted_partition=sorted_partition)
         if np.isinf(log_prior):
             return log_prior
-        fourier_freq, fourier_basis = fourier_update(adj_mat=list_of_adjacency[ind], log_beta_i=log_beta_i, prefix_id_added=prefix_id_added, suffix_id_added=suffix_id_added)
+        fourier_freq, fourier_basis = fourier_update(adj_mat=adj_mat_list[ind], log_beta_i=log_beta_i, prefix_id_added=prefix_id_added, suffix_id_added=suffix_id_added)
         model.kernel.fourier_freq_list[updated_subset_ind] = fourier_freq
         model.kernel.fourier_basis_list[updated_subset_ind] = fourier_basis
         log_likelihood = float(-inference.negative_log_likelihood(hyper=model.param_to_vec()))
@@ -65,7 +63,7 @@ def slice_edgeweight(model, input_data, output_data, categories, list_of_adjacen
     x0 = float(log_beta[ind])
     x1 = univariate_slice_sampling(logp, x0)
     log_beta[ind] = x1
-    fourier_components = fourier_update(adj_mat=list_of_adjacency[ind], log_beta_i=log_beta[ind], prefix_id_added=prefix_id_added, suffix_id_added=suffix_id_added)
+    fourier_components = fourier_update(adj_mat=adj_mat_list[ind], log_beta_i=log_beta[ind], prefix_id_added=prefix_id_added, suffix_id_added=suffix_id_added)
     model.kernel.fourier_freq_list[updated_subset_ind] = fourier_components[0]
     model.kernel.fourier_basis_list[updated_subset_ind] = fourier_components[1]
     return log_beta, model.kernel.fourier_freq_list, model.kernel.fourier_basis_list
@@ -92,22 +90,21 @@ if __name__ == '__main__':
     from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel as DiffusionKernel_
     from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression as GPRegression_
     from GraphDecompositionBO.graphGP.sampler.tool_partition import sort_partition as sort_partition_
-    from GraphDecompositionBO.graphGP.sampler.tool_partition import compute_unit_in_group as compute_unit_in_group_
     from GraphDecompositionBO.graphGP.sampler.tool_partition import group_input as group_input_
     from GraphDecompositionBO.graphGP.sampler.tool_partition import ungroup_input as ungroup_input_
     from GraphDecompositionBO.graphGP.sampler.priors import log_prior_partition as log_prior_partition_
     n_vars_ = 100
     n_data_ = 60
-    categories_ = np.random.randint(5, 6, n_vars_)
-    list_of_adjacency_ = []
+    n_vertex_ = np.random.randint(5, 6, n_vars_)
+    adj_mat_list_ = []
     for d_ in range(n_vars_):
-        adjacency_ = torch.ones(categories_[d_], categories_[d_])
-        adjacency_[range(categories_[d_]), range(categories_[d_])] = 0
-        list_of_adjacency_.append(adjacency_)
+        adjacency_ = torch.ones(n_vertex_[d_], n_vertex_[d_])
+        adjacency_[range(n_vertex_[d_]), range(n_vertex_[d_])] = 0
+        adj_mat_list_.append(adjacency_)
     input_data_ = torch.zeros(n_data_, n_vars_).long()
     output_data_ = torch.randn(n_data_, 1)
     for a_ in range(n_vars_):
-        input_data_[:, a_] = torch.randint(0, categories_[a_], (n_data_,))
+        input_data_[:, a_] = torch.randint(0, n_vertex_[a_], (n_data_,))
     inds_ = range(n_vars_)
     np.random.shuffle(inds_)
     while True:
@@ -119,14 +116,13 @@ if __name__ == '__main__':
             b_ += subset_size_
         sorted_partition_ = sort_partition_(random_partition_)
         print(sorted_partition_)
-        if np.isinf(log_prior_partition_(sorted_partition_, categories_)):
+        if np.isinf(log_prior_partition_(sorted_partition_, n_vertex_)):
             print('Infeasible partition')
         else:
             print('Feasible partition')
             break
-    unit_in_group_ = compute_unit_in_group_(sorted_partition_, categories_)
-    grouped_input_data_ = group_input_(input_data_, sorted_partition_, unit_in_group_)
-    input_data_re_ = ungroup_input_(grouped_input_data_, sorted_partition_, unit_in_group_)
+    grouped_input_data_ = group_input_(input_data_, sorted_partition_, n_vertex_)
+    input_data_re_ = ungroup_input_(grouped_input_data_, sorted_partition_, n_vertex_)
     amp_ = torch.std(output_data_, dim=0)
     log_beta_ = torch.randn(n_vars_)
     model_ = GPRegression_(kernel=DiffusionKernel_(fourier_freq_list=[], fourier_basis_list=[]))
@@ -138,7 +134,7 @@ if __name__ == '__main__':
     fourier_freq_list_ = []
     fourier_basis_list_ = []
     for subset_ in sorted_partition_:
-        adj_mat_ = strong_product(list_of_adjacency=list_of_adjacency_, beta=torch.exp(log_beta_), subset=subset_)
+        adj_mat_ = strong_product(adj_mat_list=adj_mat_list_, beta=torch.exp(log_beta_), subset=subset_)
         deg_mat_ = torch.diag(torch.sum(adj_mat_, dim=0))
         laplacian_ = deg_mat_ - adj_mat_
         fourier_freq_, fourier_basis_ = torch.symeig(laplacian_, eigenvectors=True)
@@ -151,5 +147,5 @@ if __name__ == '__main__':
     bar_ = progressbar.ProgressBar(max_value=n_vars_)
     for e_ in range(n_vars_):
         bar_.update(e_)
-        log_beta_, fourier_freq_list_, fourier_basis_list_ = slice_edgeweight(model_, input_data_, output_data_, categories_, list_of_adjacency_, log_beta_, sorted_partition_, fourier_freq_list_, fourier_basis_list_, ind=e_)
+        log_beta_, fourier_freq_list_, fourier_basis_list_ = slice_edgeweight(model_, input_data_, output_data_, n_vertex_, adj_mat_list_, log_beta_, sorted_partition_, fourier_freq_list_, fourier_basis_list_, ind=e_)
     print('\n%f' % (time.time() - start_time_))

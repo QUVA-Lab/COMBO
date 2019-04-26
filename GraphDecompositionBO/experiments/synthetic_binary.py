@@ -44,7 +44,7 @@ class HighOrderBinary(object):
 		self.highest_order = highest_order
 		self.interaction_coef = generate_function_on_highorderbinary(n_variables=n_variables, highest_order=highest_order, random_seed=case_seed)
 		self.adjacency_mat = []
-		self.fourier_coef = []
+		self.fourier_freq = []
 		self.fourier_basis = []
 		self.random_seed_info = 'R'.join([str(random_seed_pair[i]).zfill(4) if random_seed_pair[i] is not None else 'None' for i in range(2)])
 		for i in range(self.n_variables):
@@ -52,7 +52,7 @@ class HighOrderBinary(object):
 			self.adjacency_mat.append(adjmat)
 			laplacian = torch.diag(torch.sum(adjmat, dim=0)) - adjmat
 			eigval, eigvec = torch.symeig(laplacian, eigenvectors=True)
-			self.fourier_coef.append(eigval)
+			self.fourier_freq.append(eigval)
 			self.fourier_basis.append(eigvec)
 
 	def evaluate(self, x):

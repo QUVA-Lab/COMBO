@@ -42,7 +42,6 @@ def log_prior_noisevar(log_noise_var):
 def log_prior_kernelamp(log_amp, output_var, kernel_min, kernel_max):
 	if log_amp < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(10000.0)) < log_amp:
 		return -float('inf')
-	amp = np.exp(log_amp)
 	# LogNormal
 	log_amp_lower = np.log(output_var / kernel_max)
 	log_amp_upper = np.log(output_var / kernel_min)
@@ -64,7 +63,6 @@ def log_prior_edgeweight(log_beta_i, ind, sorted_partition):
 	:return: numeric(float)
 	'''
 	# Gamma prior
-	updated_subset_ind = [(ind in subset) for subset in sorted_partition].index(True)
 	shape = 1.0
 	rate = 1.0 / len(sorted_partition) ** 0.5
 	if log_beta_i < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(10000.0)) < log_beta_i:
@@ -77,7 +75,7 @@ def log_prior_edgeweight(log_beta_i, ind, sorted_partition):
 	# 	return np.log(1.0 / 2.0)
 
 
-def log_prior_partition(sorted_partition, categories):
+def log_prior_partition(sorted_partition, n_vertex):
 	'''
 	Log of unnormalized density of given partition
 	this prior prefers well-spread partition, which is quantified by induced entropy.
@@ -85,9 +83,9 @@ def log_prior_partition(sorted_partition, categories):
 	:param sorted_partition:
 	:return:
 	'''
-	if len(sorted_partition) == 1 or compute_group_size(sorted_partition=sorted_partition, categories=categories) > GRAPH_SIZE_LIMIT:
+	if len(sorted_partition) == 1 or compute_group_size(sorted_partition=sorted_partition, n_vertex=n_vertex) > GRAPH_SIZE_LIMIT:
 		return -float('inf')
 	else:
-		prob_mass = np.array([np.sum(np.log(categories[subset])) for subset in sorted_partition])
+		prob_mass = np.array([np.sum(np.log(n_vertex[subset])) for subset in sorted_partition])
 		prob_mass /= np.sum(prob_mass)
 		return np.log(np.sum(-prob_mass * np.log(prob_mass)))

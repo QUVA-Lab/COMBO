@@ -7,12 +7,11 @@ from simanneal import Annealer
 
 import torch
 
-from GraphDecompositionBO.test_functions.experiment_configuration import generate_random_seed_pair_ising, generate_random_seed_pair_contamination, generate_random_seed_aerostruct, generate_random_seed_pair_travelplan, generate_random_seed_pestcontrol, generate_random_seed_pair_centroid
-from GraphDecompositionBO.test_functions.binary_categorical import Ising1, Ising2, Contamination1, AeroStruct1, AeroStruct2, AeroStruct3
-from GraphDecompositionBO.test_functions.multiple_categorical import PESTCONTROL_N_STAGES, CENTROID_N_EDGES, CENTROID_GRID, CENTROID_N_CHOICE, PESTCONTROL_N_CHOICE
-from GraphDecompositionBO.test_functions.multiple_categorical import _pest_control_score, Centroid
-from GraphDecompositionBO.test_functions.discretized_continuous import Branin
-from GraphDecompositionBO.test_functions.experiment_configuration import sample_init_points
+from GraphDecompositionBO.experiments.test_functions import generate_random_seed_pestcontrol, generate_random_seed_pair_centroid
+from GraphDecompositionBO.experiments.test_functions import PESTCONTROL_N_STAGES, CENTROID_N_EDGES, CENTROID_N_CHOICE, PESTCONTROL_N_CHOICE
+from GraphDecompositionBO.experiments.test_functions import _pest_control_score, Centroid
+from GraphDecompositionBO.experiments.test_functions import Branin
+from GraphDecompositionBO.experiments.test_functions import sample_init_points
 from GraphDecompositionBO.baselines.utils import result_dir
 
 
