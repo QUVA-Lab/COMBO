@@ -8,7 +8,7 @@ from GraphDecompositionBO.graphGP.sampler.tool_slice_sampling import univariate_
 from GraphDecompositionBO.graphGP.sampler.priors import log_prior_constmean, log_prior_noisevar, log_prior_kernelamp
 
 
-def slice_hyper(model, input_data, output_data, n_vertex, sorted_partition):
+def slice_hyper(model, input_data, output_data, n_vertices, sorted_partition):
 	'''
 
 	:param model:
@@ -16,7 +16,7 @@ def slice_hyper(model, input_data, output_data, n_vertex, sorted_partition):
 	:param output_data:
 	:return:
 	'''
-	grouped_input_data = group_input(input_data=input_data, sorted_partition=sorted_partition, n_vertex=n_vertex)
+	grouped_input_data = group_input(input_data=input_data, sorted_partition=sorted_partition, n_vertices=n_vertices)
 	inference = Inference(train_data=(grouped_input_data, output_data), model=model)
 	# Randomly shuffling order can be considered, here the order is in const_mean, kernel_amp, noise_var
 	slice_constmean(inference)
@@ -112,16 +112,16 @@ if __name__ == '__main__':
 	from GraphDecompositionBO.sampler.tool_partition import sort_partition, group_input, ungroup_input
 	n_vars_ = 50
 	n_data_ = 60
-	n_vertex_ = np.random.randint(2, 3, n_vars_)
+	n_vertices_ = np.random.randint(2, 3, n_vars_)
 	adj_mat_list_ = []
 	for d_ in range(n_vars_):
-		adjacency_ = torch.ones(n_vertex_[d_], n_vertex_[d_])
-		adjacency_[range(n_vertex_[d_]), range(n_vertex_[d_])] = 0
+		adjacency_ = torch.ones(n_vertices_[d_], n_vertices_[d_])
+		adjacency_[range(n_vertices_[d_]), range(n_vertices_[d_])] = 0
 		adj_mat_list_.append(adjacency_)
 	input_data_ = torch.zeros(n_data_, n_vars_).long()
 	output_data_ = torch.randn(n_data_, 1)
 	for a_ in range(n_vars_):
-		input_data_[:, a_] = torch.randint(0, n_vertex_[a_], (n_data_,))
+		input_data_[:, a_] = torch.randint(0, n_vertices_[a_], (n_data_,))
 	inds_ = range(n_vars_)
 	np.random.shuffle(inds_)
 	b_ = 0
@@ -131,8 +131,8 @@ if __name__ == '__main__':
 		random_partition_.append(inds_[b_:b_ + subset_size_])
 		b_ += subset_size_
 	sorted_partition_ = sort_partition(random_partition_)
-	grouped_input_data_ = group_input(input_data_, sorted_partition_, n_vertex_)
-	input_data_re_ = ungroup_input(grouped_input_data_, sorted_partition_, n_vertex_)
+	grouped_input_data_ = group_input(input_data_, sorted_partition_, n_vertices_)
+	input_data_re_ = ungroup_input(grouped_input_data_, sorted_partition_, n_vertices_)
 	amp_ = torch.std(output_data_, dim=0)
 	log_beta_ = torch.randn(n_vars_)
 	model_ = GPRegression(kernel=DiffusionKernel(fourier_freq_list=[], fourier_basis_list=[]))

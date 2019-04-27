@@ -5,11 +5,11 @@ import torch
 
 from GraphDecompositionBO.graphGP.kernels.diffusionkernel import DiffusionKernel
 from GraphDecompositionBO.graphGP.models.gp_regression import GPRegression
-from GraphDecompositionBO.graphGP.inference.inference import Inference
 from GraphDecompositionBO.graphGP.sampler.sample_posterior import posterior_sampling
 
 from GraphDecompositionBO.acquisition.acquisition_optimization import next_evaluation
 from GraphDecompositionBO.acquisition.acquisition_functions import expected_improvement
+from GraphDecompositionBO.acquisition.acquisition_marginalization import inference_sampling
 
 from GraphDecompositionBO.utils import experiment_directory, model_data_filenames, load_model_data, displaying_and_logging
 
@@ -30,7 +30,7 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, **kwargs):
 	assert (path is None) != (objective is None)
 	acquisition_func = expected_improvement
 
-	n_vertex = adj_mat_list = None
+	n_vertices = adj_mat_list = None
 	eval_inputs = eval_outputs = log_beta = sorted_partition = None
 	time_list = elapse_list = pred_mean_list = pred_std_list = pred_var_list = None
 
@@ -39,7 +39,7 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, **kwargs):
 		objective_name = '_'.join([objective.__class__.__name__, objective.random_seed_info if hasattr(objective, 'random_seed_info') else 'none', ('%.1E' % objective.lamda) if hasattr(objective, 'lamda') else ''])
 		model_filename, data_cfg_filaname, logfile_dir = model_data_filenames(exp_dir=exp_dir, objective_name=objective_name)
 
-		n_vertex = objective.n_vertex
+		n_vertices = objective.n_vertices
 		adj_mat_list = objective.adjacency_mat
 		fourier_freq_list = objective.fourier_freq
 		fourier_basis_list = objective.fourier_basis
@@ -63,13 +63,9 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, **kwargs):
 		pred_std_list = [0] * n_init
 		pred_var_list = [0] * n_init
 
-		print(eval_inputs)
-		print(eval_outputs)
-
-		inference = Inference((eval_inputs, eval_outputs), surrogate_model)
-		inference.init_parameters()
-		sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertex, adj_mat_list,
-		                                      log_beta, sorted_partition, n_sample=1, n_burn=99, n_thin=1)
+		surrogate_model.init_param(eval_outputs)
+		sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
+		                                      log_beta, sorted_partition, n_sample=1, n_burn=2, n_thin=1)
 		log_beta = sample_posterior[1][0]
 		sorted_partition = sample_posterior[2][0]
 	else:
@@ -78,14 +74,16 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, **kwargs):
 	for _ in range(n_eval):
 
 		reference = torch.min(eval_outputs, dim=0)[0].item()
-		sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertex, adj_mat_list,
+		sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
 		                                      log_beta, sorted_partition, n_sample=10, n_burn=0, n_thin=1)
 		hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples = sample_posterior
 		log_beta = log_beta_samples[-1]
 		sorted_partition = partition_samples[-1]
 
 		x_opt = eval_inputs[torch.argmin(eval_outputs)]
-		suggestion = next_evaluation(x_opt, eval_inputs, eval_outputs, partition_samples, edge_mat_samples, n_vertex,
+		inference_samples = inference_sampling(eval_inputs, eval_outputs, n_vertices,
+		                                       hyper_samples, partition_samples, freq_samples, basis_samples)
+		suggestion = next_evaluation(x_opt, eval_inputs, inference_samples, partition_samples, edge_mat_samples, n_vertices,
 		                             acquisition_func, reference, parallel)
 		next_eval, pred_mean, pred_std, pred_var = suggestion
 
@@ -118,33 +116,32 @@ if __name__ == '__main__':
 	print(args)
 	assert (args.path is None) != (args.objective is None)
 	args_dict = vars(args)
-	if args.objective is not None:
-		if args.objective.split('_')[0] == 'ising':
-			assert 1 <= int(args.random_seed_config) <= 25
-			random_seed_pair = generate_random_seed_pair_ising()
-			random_seed_config = args.random_seed_config - 1
-			case_seed = sorted(random_seed_pair.keys())[int(random_seed_config / 5)]
-			init_seed = sorted(random_seed_pair[case_seed])[int(random_seed_config % 5)]
-			args.objective = Ising(lamda=float(args.objective.split('_')[1]), random_seed_pair=(case_seed, init_seed))
-		elif args.objective.split('_')[0] == 'contamination':
-			assert 1 <= int(args.random_seed_config) <= 25
-			random_seed_pair = generate_random_seed_pair_contamination()
-			random_seed_config = args.random_seed_config - 1
-			case_seed = sorted(random_seed_pair.keys())[int(random_seed_config / 5)]
-			init_seed = sorted(random_seed_pair[case_seed])[int(random_seed_config % 5)]
-			args.objective = Contamination(lamda=float(args.objective.split('_')[1]), random_seed_pair=(case_seed, init_seed))
-		elif args.objective.split('_')[0] == 'pestcontrol':
-			assert 1 <= int(args.random_seed_config) <= 25
-			random_seed = sorted(generate_random_seed_pestcontrol())[args.random_seed_config - 1]
-			args.objective = PestControl(random_seed=random_seed)
-		elif args.objective.split('_')[0] == 'centroid':
-			assert 1 <= int(args.random_seed_config) <= 25
-			random_seed_pair = generate_random_seed_pair_centroid()
-			random_seed_config = args.random_seed_config - 1
-			case_seed = sorted(random_seed_pair.keys())[int(random_seed_config / 5)]
-			init_seed = sorted(random_seed_pair[case_seed])[int(random_seed_config % 5)]
-			print(case_seed, init_seed)
-			args.objective = Centroid(random_seed_pair=(case_seed, init_seed))
-		else:
-			raise NotImplementedError
+	if args.objective == 'ising':
+		assert 1 <= int(args.random_seed_config) <= 25
+		random_seed_pair = generate_random_seed_pair_ising()
+		random_seed_config = args.random_seed_config - 1
+		case_seed = sorted(random_seed_pair.keys())[int(random_seed_config / 5)]
+		init_seed = sorted(random_seed_pair[case_seed])[int(random_seed_config % 5)]
+		args.objective = Ising(random_seed_pair=(case_seed, init_seed))
+	elif args.objective == 'contamination':
+		assert 1 <= int(args.random_seed_config) <= 25
+		random_seed_pair = generate_random_seed_pair_contamination()
+		random_seed_config = args.random_seed_config - 1
+		case_seed = sorted(random_seed_pair.keys())[int(random_seed_config / 5)]
+		init_seed = sorted(random_seed_pair[case_seed])[int(random_seed_config % 5)]
+		args.objective = Contamination(random_seed_pair=(case_seed, init_seed))
+	elif args.objective == 'pestcontrol':
+		assert 1 <= int(args.random_seed_config) <= 25
+		random_seed = sorted(generate_random_seed_pestcontrol())[args.random_seed_config - 1]
+		args.objective = PestControl(random_seed=random_seed)
+	elif args.objective == 'centroid':
+		assert 1 <= int(args.random_seed_config) <= 25
+		random_seed_pair = generate_random_seed_pair_centroid()
+		random_seed_config = args.random_seed_config - 1
+		case_seed = sorted(random_seed_pair.keys())[int(random_seed_config / 5)]
+		init_seed = sorted(random_seed_pair[case_seed])[int(random_seed_config % 5)]
+		print(case_seed, init_seed)
+		args.objective = Centroid(random_seed_pair=(case_seed, init_seed))
+	else:
+		raise NotImplementedError
 	GOLD(**vars(args))

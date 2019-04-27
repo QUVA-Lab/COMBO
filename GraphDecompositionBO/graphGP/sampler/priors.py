@@ -75,7 +75,7 @@ def log_prior_edgeweight(log_beta_i, ind, sorted_partition):
 	# 	return np.log(1.0 / 2.0)
 
 
-def log_prior_partition(sorted_partition, n_vertex):
+def log_prior_partition(sorted_partition, n_vertices):
 	'''
 	Log of unnormalized density of given partition
 	this prior prefers well-spread partition, which is quantified by induced entropy.
@@ -83,9 +83,9 @@ def log_prior_partition(sorted_partition, n_vertex):
 	:param sorted_partition:
 	:return:
 	'''
-	if len(sorted_partition) == 1 or compute_group_size(sorted_partition=sorted_partition, n_vertex=n_vertex) > GRAPH_SIZE_LIMIT:
+	if len(sorted_partition) == 1 or compute_group_size(sorted_partition=sorted_partition, n_vertices=n_vertices) > GRAPH_SIZE_LIMIT:
 		return -float('inf')
 	else:
-		prob_mass = np.array([np.sum(np.log(n_vertex[subset])) for subset in sorted_partition])
+		prob_mass = np.array([np.sum(np.log(n_vertices[subset])) for subset in sorted_partition])
 		prob_mass /= np.sum(prob_mass)
 		return np.log(np.sum(-prob_mass * np.log(prob_mass)))

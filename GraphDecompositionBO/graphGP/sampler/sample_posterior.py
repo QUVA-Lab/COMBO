@@ -9,14 +9,14 @@ from GraphDecompositionBO.graphGP.sampler.sample_partition import gibbs_partitio
 from GraphDecompositionBO.graphGP.sampler.tool_partition import ind_to_perturb, strong_product
 
 
-def posterior_sampling(model, input_data, output_data, n_vertex, adj_mat_list,
+def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
                        log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
 	"""
 
 	:param model:
 	:param input_data:
 	:param output_data:
-	:param n_vertex:
+	:param n_vertices:
 	:param adj_mat_list:
 	:param log_beta:
 	:param sorted_partition:
@@ -51,20 +51,20 @@ def posterior_sampling(model, input_data, output_data, n_vertex, adj_mat_list,
 		if len(shuffled_partition_ind) == 0:
 			shuffled_partition_ind = range(len(adj_mat_list))
 			np.random.shuffle(shuffled_partition_ind)
-		partition_ind = ind_to_perturb(sorted_partition=partition_sample, n_vertex=n_vertex)
+		partition_ind = ind_to_perturb(sorted_partition=partition_sample, n_vertices=n_vertices)
 		# partition_ind = shuffled_partition_ind.pop()
-		gibbs_tuple = gibbs_partition(model, input_data, output_data, n_vertex, adj_mat_list,
+		gibbs_tuple = gibbs_partition(model, input_data, output_data, n_vertices, adj_mat_list,
 		                              log_beta=log_beta_sample, sorted_partition=partition_sample,
 		                              fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
 		                              edge_mat_list=edge_mat_list, ind=partition_ind)
 		partition_sample, fourier_freq_list, fourier_basis_list, edge_mat_list = gibbs_tuple
-		slice_hyper(model, input_data, output_data, n_vertex, sorted_partition=partition_sample)
+		slice_hyper(model, input_data, output_data, n_vertices, sorted_partition=partition_sample)
 
 		shuffled_beta_ind = range(len(adj_mat_list))
 		np.random.shuffle(shuffled_beta_ind)
 		for beta_ind in shuffled_beta_ind:
 			# In each sampler, model.kernel fourier_freq_list, fourier_basis_list are updated.
-			slice_tuple = slice_edgeweight(model, input_data, output_data, n_vertex, adj_mat_list,
+			slice_tuple = slice_edgeweight(model, input_data, output_data, n_vertices, adj_mat_list,
 			                               log_beta=log_beta_sample, sorted_partition=partition_sample,
 			                               fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
 			                               ind=beta_ind)

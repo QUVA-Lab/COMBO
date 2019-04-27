@@ -41,44 +41,44 @@ def sort_partition(partition):
 	return sorted_partition
 
 
-def compute_unit_in_group(sorted_partition, n_vertex):
+def compute_unit_in_group(sorted_partition, n_vertices):
 	'''
 	In order to convert between grouped variable and original ungrouped variable, units are necessary
-	e.g) when C1, C2, C5 are grouped and C1, C2, C5 have 3, 4, 5 n_vertex respectively,
+	e.g) when C1, C2, C5 are grouped and C1, C2, C5 have 3, 4, 5 n_vertices respectively,
 	then (c1, c2, c5) in ungrouped value is equivalent to c1 x 4 x 5 + c2 x 5 + c3 in grouped value,
 	here 4 x 5 is the unit for c1, 5 is unit for c2, 1 is unit for c3
 	:param sorted_partition: list of subsets, elements in a subset are ordered, subsets are ordered by their smallest elements
-	:param n_vertex: 1d np.array
+	:param n_vertices: 1d np.array
 	:return: unit is given as the same order corresponding to sorted_partition
 	'''
 	unit_in_group = []
 	for subset in sorted_partition:
-		ind_units = list(np.flip(np.cumprod((n_vertex[subset][1:][::-1])))) + [1]
+		ind_units = list(np.flip(np.cumprod((n_vertices[subset][1:][::-1])))) + [1]
 		unit_in_group.append(ind_units)
 	return unit_in_group
 
 
-def compute_group_size(sorted_partition, n_vertex):
+def compute_group_size(sorted_partition, n_vertices):
 	'''
 	Return the size of the largest subgraph (a product of strong product)
 	:param sorted_partition:
-	:param n_vertex: 1d np.array
+	:param n_vertices: 1d np.array
 	:return:
 	'''
-	complexity = sum([np.prod(n_vertex[subset]) ** 3 for subset in sorted_partition])
-	max_size = max([np.prod(n_vertex[subset]) for subset in sorted_partition])
+	complexity = sum([np.prod(n_vertices[subset]) ** 3 for subset in sorted_partition])
+	max_size = max([np.prod(n_vertices[subset]) for subset in sorted_partition])
 	return max_size
 
 
-def group_input(input_data, sorted_partition, n_vertex):
+def group_input(input_data, sorted_partition, n_vertices):
 	'''
 
 	:param input_data: 2D torch.Tensor, size(0) : number of data, size(1) : number of original variables
 	:param sorted_partition: list of subsets, elements in each subset are ordered, subsets are ordered by their smallest elements
-	:param unit_in_group: compute_unit_in_group(sorted_partition, n_vertex)
+	:param unit_in_group: compute_unit_in_group(sorted_partition, n_vertices)
 	:return: 2D torch.Tensor, size(0) : number of data, size(1) : number of grouped variables
 	'''
-	unit_in_group = compute_unit_in_group(sorted_partition, n_vertex)
+	unit_in_group = compute_unit_in_group(sorted_partition, n_vertices)
 	grouped_input = input_data.new_zeros(input_data.size(0), len(sorted_partition))
 	for g in range(len(sorted_partition)):
 		for ind, unit in zip(sorted_partition[g], unit_in_group[g]):
@@ -86,15 +86,15 @@ def group_input(input_data, sorted_partition, n_vertex):
 	return grouped_input
 
 
-def ungroup_input(grouped_input, sorted_partition, n_vertex):
+def ungroup_input(grouped_input, sorted_partition, n_vertices):
 	'''
 
 	:param grouped_input: 2D torch.Tensor, size(0) : number of data, size(1) : number of grouped variables
 	:param sorted_partition: list of subsets, elements in each subset are ordered, subsets are ordered by their smallest elements
-	:param unit_in_group: compute_unit_in_group(sorted_partition, n_vertex)
+	:param unit_in_group: compute_unit_in_group(sorted_partition, n_vertices)
 	:return: 2D torch.Tensor, size(0) : number of data, size(1) : number of original variables
 	'''
-	unit_in_group = compute_unit_in_group(sorted_partition, n_vertex)
+	unit_in_group = compute_unit_in_group(sorted_partition, n_vertices)
 	input_data = grouped_input.new_zeros(grouped_input.size(0), sum([len(subset) for subset in sorted_partition]))
 	for g in range(len(sorted_partition)):
 		subset = sorted_partition[g]
@@ -154,13 +154,13 @@ def neighbor_partitions(sorted_partition, ind):
 	return neighbors
 
 
-def ind_to_perturb(sorted_partition, n_vertex):
-	log_prob_subsets = np.log(np.array([np.sum(np.log(n_vertex[subset])) for subset in sorted_partition]))
+def ind_to_perturb(sorted_partition, n_vertices):
+	log_prob_subsets = np.log(np.array([np.sum(np.log(n_vertices[subset])) for subset in sorted_partition]))
 	gumbel_max_rv_subsets = np.argmax(-np.log(-np.log(np.random.uniform(0, 1, log_prob_subsets.shape))) + log_prob_subsets)
 	if len(sorted_partition[gumbel_max_rv_subsets]) == 1:
 		return sorted_partition[gumbel_max_rv_subsets][0]
 	else:
-		log_prob_ind = np.log(np.log(n_vertex[sorted_partition[gumbel_max_rv_subsets]]))
+		log_prob_ind = np.log(np.log(n_vertices[sorted_partition[gumbel_max_rv_subsets]]))
 		gumbel_max_rv_ind = np.argmax(-np.log(-np.log(np.random.uniform(0, 1, log_prob_ind.shape))) + log_prob_ind)
 		return sorted_partition[gumbel_max_rv_subsets][gumbel_max_rv_ind]
 
@@ -168,16 +168,16 @@ def ind_to_perturb(sorted_partition, n_vertex):
 if __name__ == '__main__':
 	n_vars_ = 50
 	n_data_ = 60
-	n_vertex_ = np.random.randint(2, 3, n_vars_)
+	n_vertices_ = np.random.randint(2, 3, n_vars_)
 	adj_mat_list_ = []
 	for d_ in range(n_vars_):
-		adjacency_ = torch.ones(n_vertex_[d_], n_vertex_[d_])
-		adjacency_[range(n_vertex_[d_]), range(n_vertex_[d_])] = 0
+		adjacency_ = torch.ones(n_vertices_[d_], n_vertices_[d_])
+		adjacency_[range(n_vertices_[d_]), range(n_vertices_[d_])] = 0
 		adj_mat_list_.append(adjacency_)
 	input_data_ = torch.zeros(n_data_, n_vars_).long()
 	output_data_ = torch.randn(n_data_, 1)
 	for a_ in range(n_vars_):
-		input_data_[:, a_] = torch.randint(0, n_vertex_[a_], (n_data_,))
+		input_data_[:, a_] = torch.randint(0, n_vertices_[a_], (n_data_,))
 	inds_ = range(n_vars_)
 	np.random.shuffle(inds_)
 	b_ = 0
@@ -187,7 +187,7 @@ if __name__ == '__main__':
 		random_partition_.append(inds_[b_:b_ + subset_size_])
 		b_ += subset_size_
 	sorted_partition_ = sort_partition(random_partition_)
-	unit_in_group_ = compute_unit_in_group(sorted_partition_, n_vertex_)
+	unit_in_group_ = compute_unit_in_group(sorted_partition_, n_vertices_)
 	grouped_input_ = group_input(input_data_, sorted_partition_, unit_in_group_)
 	input_data_re_ = ungroup_input(grouped_input_, sorted_partition_, unit_in_group_)
 	print(torch.sum((input_data_ - input_data_re_) ** 2))

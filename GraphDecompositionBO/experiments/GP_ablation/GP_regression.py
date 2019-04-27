@@ -20,12 +20,12 @@ from GraphDecompositionBO.graphGP.inference.inference import Inference
 from GraphDecompositionBO.experiments.GP_ablation.data_loader import load_highorderbinary, load_maxsat
 
 
-def COMBO_GP_sample(model, input_data, output_data, n_vertex, adj_mat_list, log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
+def COMBO_GP_sample(model, input_data, output_data, n_vertices, adj_mat_list, log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
 	'''
 	:param model:
 	:param input_data:
 	:param output_data:
-	:param n_vertex:  1d np.array
+	:param n_vertices:  1d np.array
 	:param adj_mat_list:
 	:param log_beta:
 	:param sorted_partition:
@@ -49,14 +49,14 @@ def COMBO_GP_sample(model, input_data, output_data, n_vertex, adj_mat_list, log_
 
 	bar = progressbar.ProgressBar(max_value=n_sample * n_thin + n_burn)
 	for s in range(n_sample * n_thin + n_burn):
-		slice_hyper(model=model, input_data=input_data, output_data=output_data, n_vertex=n_vertex, sorted_partition=sorted_partition)
+		slice_hyper(model=model, input_data=input_data, output_data=output_data, n_vertices=n_vertices, sorted_partition=sorted_partition)
 
 		shuffled_beta_ind = range(len(adj_mat_list))
 		np.random.shuffle(shuffled_beta_ind)
 		for beta_ind in shuffled_beta_ind:
 			# In each sampler, model.kernel fourier_freq_list, fourier_basis_list are updated.
 			slice_tuple = slice_edgeweight(model=model, input_data=input_data, output_data=output_data,
-			                               n_vertex=n_vertex, adj_mat_list=adj_mat_list,
+			                               n_vertices=n_vertices, adj_mat_list=adj_mat_list,
 			                               log_beta=log_beta_sample, sorted_partition=sorted_partition,
 			                               fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
 			                               ind=beta_ind)
@@ -73,12 +73,12 @@ def COMBO_GP_sample(model, input_data, output_data, n_vertex, adj_mat_list, log_
 	return hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples
 
 
-def GOLD_GP_sample(model, input_data, output_data, n_vertex, adj_mat_list, log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
+def GOLD_GP_sample(model, input_data, output_data, n_vertices, adj_mat_list, log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
 	'''
 	:param model:
 	:param input_data:
 	:param output_data:
-	:param n_vertex:  1d np.array
+	:param n_vertices:  1d np.array
 	:param adj_mat_list:
 	:param log_beta:
 	:param sorted_partition:
@@ -111,22 +111,22 @@ def GOLD_GP_sample(model, input_data, output_data, n_vertex, adj_mat_list, log_b
 		if len(shuffled_partition_ind) == 0:
 			shuffled_partition_ind = range(len(adj_mat_list))
 			np.random.shuffle(shuffled_partition_ind)
-		partition_ind = ind_to_perturb(sorted_partition=partition_sample, n_vertex=n_vertex)
+		partition_ind = ind_to_perturb(sorted_partition=partition_sample, n_vertices=n_vertices)
 		# partition_ind = shuffled_partition_ind.pop()
 		gibbs_tuple = gibbs_partition(model=model, input_data=input_data, output_data=output_data,
-		                              n_vertex=n_vertex, adj_mat_list=adj_mat_list,
+		                              n_vertices=n_vertices, adj_mat_list=adj_mat_list,
 		                              log_beta=log_beta_sample, sorted_partition=partition_sample,
 		                              fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
 		                              edge_mat_list=edge_mat_list, ind=partition_ind)
 		partition_sample, fourier_freq_list, fourier_basis_list, edge_mat_list = gibbs_tuple
-		slice_hyper(model=model, input_data=input_data, output_data=output_data, n_vertex=n_vertex, sorted_partition=partition_sample)
+		slice_hyper(model=model, input_data=input_data, output_data=output_data, n_vertices=n_vertices, sorted_partition=partition_sample)
 
 		shuffled_beta_ind = range(len(adj_mat_list))
 		np.random.shuffle(shuffled_beta_ind)
 		for beta_ind in shuffled_beta_ind:
 			# In each sampler, model.kernel fourier_freq_list, fourier_basis_list are updated.
 			slice_tuple = slice_edgeweight(model=model, input_data=input_data, output_data=output_data,
-			                               n_vertex=n_vertex, adj_mat_list=adj_mat_list,
+			                               n_vertices=n_vertices, adj_mat_list=adj_mat_list,
 			                               log_beta=log_beta_sample, sorted_partition=partition_sample,
 			                               fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
 			                               ind=beta_ind)
@@ -143,7 +143,7 @@ def GOLD_GP_sample(model, input_data, output_data, n_vertex, adj_mat_list, log_b
 	return hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples
 
 
-def evaluate_sample(model, train_input, train_output, test_input, test_output, n_vertex, hyper_samples,
+def evaluate_sample(model, train_input, train_output, test_input, test_output, n_vertices, hyper_samples,
                     log_beta_samples, partition_samples, freq_samples, basis_samples):
 	assert len(hyper_samples) == len(freq_samples) == len(basis_samples)
 	n_sample = len(hyper_samples)
@@ -151,7 +151,7 @@ def evaluate_sample(model, train_input, train_output, test_input, test_output, n
 	for i in range(n_sample):
 		model.kernel.fourier_freq_list = [elm.clone() for elm in freq_samples[i]]
 		model.kernel.fourier_basis_list = [elm.clone() for elm in basis_samples[i]]
-		train_grouped_input = group_input(input_data=train_input, sorted_partition=partition_samples[i], n_vertex=n_vertex)
+		train_grouped_input = group_input(input_data=train_input, sorted_partition=partition_samples[i], n_vertices=n_vertices)
 		inference = Inference((train_grouped_input, train_output), model)
 		train_mll_sum += -inference.negative_log_likelihood(hyper=hyper_samples[i])
 	train_mll_avg = train_mll_sum / float(n_sample)
@@ -162,8 +162,8 @@ def evaluate_sample(model, train_input, train_output, test_input, test_output, n
 	for i in range(n_sample):
 		model.kernel.fourier_freq_list = [elm.clone() for elm in freq_samples[i]]
 		model.kernel.fourier_basis_list = [elm.clone() for elm in basis_samples[i]]
-		train_grouped_input = group_input(input_data=train_input, sorted_partition=partition_samples[i], n_vertex=n_vertex)
-		test_grouped_input = group_input(input_data=test_input, sorted_partition=partition_samples[i], n_vertex=n_vertex)
+		train_grouped_input = group_input(input_data=train_input, sorted_partition=partition_samples[i], n_vertices=n_vertices)
+		test_grouped_input = group_input(input_data=test_input, sorted_partition=partition_samples[i], n_vertices=n_vertices)
 		inference = Inference((train_grouped_input, train_output), model)
 		test_sample_pred_mean, test_sample_pred_var = inference.predict(test_grouped_input, hyper=hyper_samples[i])
 
@@ -196,12 +196,12 @@ def GP_regression_sampling(data_type, train_data_scale, n_sample, n_thin, n_burn
 	# dataset = load_maxsat(data_type=data_type, train_data_scale=train_data_scale, random_seed=random_seed)
 	(train_input, train_output), (test_input, test_output) = dataset
 	n_variables = train_input.size(1)
-	n_vertex = np.array([2 for _ in range(n_variables)])
+	n_vertices = np.array([2 for _ in range(n_variables)])
 	adj_mat_list = []
 	init_log_beta = torch.zeros(n_variables)
 	init_sorted_partition = [[m] for m in range(n_variables)]
 	# init_sorted_partition = [[0, 1], [2], [3], [4]]
-	n_vertex = np.array([np.prod(n_vertex[subset]) for subset in init_sorted_partition])
+	n_vertices = np.array([np.prod(n_vertices[subset]) for subset in init_sorted_partition])
 
 	fourier_freq_list = []
 	fourier_basis_list = []
@@ -219,7 +219,7 @@ def GP_regression_sampling(data_type, train_data_scale, n_sample, n_thin, n_burn
 
 	sampler = GOLD_GP_sample if learn_decomposition else COMBO_GP_sample
 	posterior_sample = sampler(model=model, input_data=train_input, output_data=train_output,
-	                           n_vertex=n_vertex, adj_mat_list=adj_mat_list,
+	                           n_vertices=n_vertices, adj_mat_list=adj_mat_list,
 	                           log_beta=init_log_beta, sorted_partition=init_sorted_partition,
 	                           n_sample=n_sample, n_burn=n_burn, n_thin=n_thin)
 	hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples = posterior_sample
@@ -230,7 +230,7 @@ def GP_regression_sampling(data_type, train_data_scale, n_sample, n_thin, n_burn
 		for t in range(len(freq_samples[s])):
 			assert basis_samples[s][t].size() == edge_mat_samples[s][t].size()
 			assert freq_samples[s][t].size(0) == basis_samples[s][t].size(0) == basis_samples[s][t].size(1)
-	mll, pll = evaluate_sample(model, train_input, train_output, test_input, test_output, n_vertex, hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples)
+	mll, pll = evaluate_sample(model, train_input, train_output, test_input, test_output, n_vertices, hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples)
 	print(' %+10.4f |    %+10.4f |' % (mll, pll))
 	return mll, pll
 

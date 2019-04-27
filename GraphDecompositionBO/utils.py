@@ -57,15 +57,9 @@ def displaying_and_logging(logfile_dir, eval_inputs, eval_outputs, pred_mean_lis
 	for i in range(eval_inputs.size(0)):
 		min_val, min_ind = torch.min(eval_outputs[:i + 1], 0)
 		time_str = time.strftime('%H:%M:%S', time.gmtime(time_list[i])) + '(' + time.strftime('%H:%M:%S', time.gmtime(elapse_list[i])) + ')  '
-		data_str = ('%3d-th : %+12.4f, '
-		            'mean : %+.4E, '
-		            'std : %.4E, '
-		            'var : %.4E, ' 
-		            'min : %+8.4f(%3d)' %
+		data_str = ('%3d-th : %+12.4f, mean : %+.4E, std : %.4E, var : %.4E, min : %+8.4f(%3d)' %
 		            (i + 1, eval_outputs.squeeze()[i],
-		             pred_mean_list[i],
-		             pred_std_list[i],
-		             pred_var_list[i],
+		             pred_mean_list[i], pred_std_list[i], pred_var_list[i],
 		             min_val.item(), min_ind.item() + 1))
 		min_str = '  <==== IMPROVED' if i == min_ind.item() else ''
 		print(time_str + data_str + min_str)

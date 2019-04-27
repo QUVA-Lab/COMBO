@@ -12,3 +12,7 @@ def sample_init_points(n_vertices, n_points, random_seed=None):
         torch.set_rng_state(rng_state)
     return init_points
 
+
+if __name__ == '__main__':
+    print(sample_init_points([2] * 10, 5, 3))
+

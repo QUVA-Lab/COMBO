@@ -8,7 +8,7 @@ from GraphDecompositionBO.graphGP.sampler.tool_slice_sampling import univariate_
 from GraphDecompositionBO.graphGP.sampler.priors import log_prior_edgeweight
 
 
-def slice_edgeweight(model, input_data, output_data, n_vertex, adj_mat_list, log_beta,
+def slice_edgeweight(model, input_data, output_data, n_vertices, adj_mat_list, log_beta,
                      sorted_partition, fourier_freq_list, fourier_basis_list, ind):
     '''
     Slice sampling the edgeweight(exp('log_beta')) at 'ind' in 'log_beta' vector
@@ -16,7 +16,7 @@ def slice_edgeweight(model, input_data, output_data, n_vertex, adj_mat_list, log
     :param model:
     :param input_data:
     :param output_data:
-    :param n_vertex: 1d np.array
+    :param n_vertices: 1d np.array
     :param adj_mat_list: list of 2D torch.Tensor of adjacency matrix of base subgraphs
     :param log_beta:
     :param sorted_partition: Partition of {0, ..., K-1}, list of subsets(list)
@@ -42,7 +42,7 @@ def slice_edgeweight(model, input_data, output_data, n_vertex, adj_mat_list, log
 
     model.kernel.fourier_freq_list = fourier_freq_list
     model.kernel.fourier_basis_list = fourier_basis_list
-    grouped_input_data = group_input(input_data=input_data, sorted_partition=sorted_partition, n_vertex=n_vertex)
+    grouped_input_data = group_input(input_data=input_data, sorted_partition=sorted_partition, n_vertices=n_vertices)
     inference = Inference(train_data=(grouped_input_data, output_data), model=model)
 
     def logp(log_beta_i):
@@ -95,16 +95,16 @@ if __name__ == '__main__':
     from GraphDecompositionBO.graphGP.sampler.priors import log_prior_partition as log_prior_partition_
     n_vars_ = 100
     n_data_ = 60
-    n_vertex_ = np.random.randint(5, 6, n_vars_)
+    n_vertices_ = np.random.randint(5, 6, n_vars_)
     adj_mat_list_ = []
     for d_ in range(n_vars_):
-        adjacency_ = torch.ones(n_vertex_[d_], n_vertex_[d_])
-        adjacency_[range(n_vertex_[d_]), range(n_vertex_[d_])] = 0
+        adjacency_ = torch.ones(n_vertices_[d_], n_vertices_[d_])
+        adjacency_[range(n_vertices_[d_]), range(n_vertices_[d_])] = 0
         adj_mat_list_.append(adjacency_)
     input_data_ = torch.zeros(n_data_, n_vars_).long()
     output_data_ = torch.randn(n_data_, 1)
     for a_ in range(n_vars_):
-        input_data_[:, a_] = torch.randint(0, n_vertex_[a_], (n_data_,))
+        input_data_[:, a_] = torch.randint(0, n_vertices_[a_], (n_data_,))
     inds_ = range(n_vars_)
     np.random.shuffle(inds_)
     while True:
@@ -116,13 +116,13 @@ if __name__ == '__main__':
             b_ += subset_size_
         sorted_partition_ = sort_partition_(random_partition_)
         print(sorted_partition_)
-        if np.isinf(log_prior_partition_(sorted_partition_, n_vertex_)):
+        if np.isinf(log_prior_partition_(sorted_partition_, n_vertices_)):
             print('Infeasible partition')
         else:
             print('Feasible partition')
             break
-    grouped_input_data_ = group_input_(input_data_, sorted_partition_, n_vertex_)
-    input_data_re_ = ungroup_input_(grouped_input_data_, sorted_partition_, n_vertex_)
+    grouped_input_data_ = group_input_(input_data_, sorted_partition_, n_vertices_)
+    input_data_re_ = ungroup_input_(grouped_input_data_, sorted_partition_, n_vertices_)
     amp_ = torch.std(output_data_, dim=0)
     log_beta_ = torch.randn(n_vars_)
     model_ = GPRegression_(kernel=DiffusionKernel_(fourier_freq_list=[], fourier_basis_list=[]))
@@ -147,5 +147,5 @@ if __name__ == '__main__':
     bar_ = progressbar.ProgressBar(max_value=n_vars_)
     for e_ in range(n_vars_):
         bar_.update(e_)
-        log_beta_, fourier_freq_list_, fourier_basis_list_ = slice_edgeweight(model_, input_data_, output_data_, n_vertex_, adj_mat_list_, log_beta_, sorted_partition_, fourier_freq_list_, fourier_basis_list_, ind=e_)
+        log_beta_, fourier_freq_list_, fourier_basis_list_ = slice_edgeweight(model_, input_data_, output_data_, n_vertices_, adj_mat_list_, log_beta_, sorted_partition_, fourier_freq_list_, fourier_basis_list_, ind=e_)
     print('\n%f' % (time.time() - start_time_))

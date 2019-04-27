@@ -2,7 +2,8 @@ import numpy as np
 
 import torch
 
-from GraphDecompositionBO.experiments.test_functions import sample_init_points, generate_ising_interaction
+from GraphDecompositionBO.experiments.test_functions.experiment_configuration import sample_init_points, \
+	generate_ising_interaction
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import spin_covariance, partition, ising_dense
 
 PESTCONTROL_N_CHOICE = 5
@@ -26,7 +27,7 @@ class Centroid(object):
 	Ising Sparsification Problem with the simplest graph
 	"""
 	def __init__(self, random_seed_pair=(None, None)):
-		self.n_vertices = [CENTROID_N_CHOICE] * CENTROID_N_EDGES
+		self.n_vertices = np.array([CENTROID_N_CHOICE] * CENTROID_N_EDGES)
 		self.suggested_init = torch.empty(0).long()
 		self.suggested_init = torch.cat([self.suggested_init, sample_init_points(self.n_vertices, 20 - self.suggested_init.size(0), random_seed_pair[1]).long()], dim=0)
 		self.adjacency_mat = []
@@ -124,7 +125,7 @@ class PestControl(object):
 	Ising Sparsification Problem with the simplest graph
 	"""
 	def __init__(self, random_seed=None):
-		self.n_vertices = [PESTCONTROL_N_CHOICE] * PESTCONTROL_N_STAGES
+		self.n_vertices = np.array([PESTCONTROL_N_CHOICE] * PESTCONTROL_N_STAGES)
 		self.suggested_init = torch.empty(0).long()
 		self.suggested_init = torch.cat([self.suggested_init, sample_init_points(self.n_vertices, 20 - self.suggested_init.size(0), random_seed).long()], dim=0)
 		self.adjacency_mat = []

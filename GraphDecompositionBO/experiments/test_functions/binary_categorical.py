@@ -2,13 +2,10 @@ import itertools
 import numpy as np
 
 import torch
-from GraphDecompositionBO.experiments.test_functions.aero_struct import kl_decoupled_models
-from GraphDecompositionBO.experiments.test_functions import ISING_GRID_H, ISING_GRID_W
-from GraphDecompositionBO.experiments.test_functions import ISING_N_EDGES, CONTAMINATION_N_STAGES, AEROSTRUCTURAL_N_COUPLINGS
-from GraphDecompositionBO.experiments.test_functions import sample_init_points, generate_ising_interaction, generate_contamination_dynamics
-
-
-AERO_STRUCT_EVAL_UPPER_LIMIT = 1000
+from GraphDecompositionBO.experiments.test_functions.experiment_configuration import ISING_GRID_H, ISING_GRID_W, \
+    ISING_N_EDGES, CONTAMINATION_N_STAGES
+from GraphDecompositionBO.experiments.test_functions.experiment_configuration import sample_init_points, \
+    generate_ising_interaction, generate_contamination_dynamics
 
 
 def spin_covariance(interaction, grid_shape):
@@ -44,16 +41,16 @@ def partition(interaction, grid_shape):
     return interaction_partition
 
 
-def ising_dense(interaction_original, interaction_sparsified, covariance, partition_original, partition_sparsified, grid_h):
+def ising_dense(interaction_original, interaction_sparsified, covariance, partition_original, partition_sparsified):
     diff_horizontal = interaction_original[0] - interaction_sparsified[0]
     diff_vertical = interaction_original[1] - interaction_sparsified[1]
 
     kld = 0
     n_spin = covariance.shape[0]
     for i in range(n_spin):
-        i_h, i_v = int(i / grid_h), int(i % grid_h)
+        i_h, i_v = int(i / ISING_GRID_H), int(i % ISING_GRID_H)
         for j in range(i, n_spin):
-            j_h, j_v = int(j / grid_h), int(j % grid_h)
+            j_h, j_v = int(j / ISING_GRID_H), int(j % ISING_GRID_H)
             if i_h == j_h and abs(i_v - j_v) == 1:
                 kld += diff_horizontal[i_h, min(i_v, j_v)] * covariance[i, j]
             elif abs(i_h - j_h) == 1 and i_v == j_v:
@@ -77,9 +74,9 @@ class Ising(object):
     """
     Ising Sparsification Problem with the simplest graph
     """
-    def __init__(self, lamda, random_seed_pair=(None, None)):
-        self.lamda = lamda
-        self.n_vertices = [2] * ISING_N_EDGES
+    def __init__(self, random_seed_pair=(None, None)):
+        self.lamda = 0.01
+        self.n_vertices = np.array([2] * ISING_N_EDGES)
         self.suggested_init = torch.empty(0).long()
         self.suggested_init = torch.cat([self.suggested_init, sample_init_points([2] * ISING_N_EDGES, 20 - self.suggested_init.size(0), random_seed_pair[1]).long()], dim=0)
         self.adjacency_mat = []
@@ -133,9 +130,9 @@ class Contamination(object):
     """
     Contamination Control Problem with the simplest graph
     """
-    def __init__(self, lamda, random_seed_pair=(None, None)):
-        self.lamda = lamda
-        self.n_vertices = [2] * CONTAMINATION_N_STAGES
+    def __init__(self, random_seed_pair=(None, None)):
+        self.lamda = 0.01
+        self.n_vertices = np.array([2] * CONTAMINATION_N_STAGES)
         self.suggested_init = torch.empty(0).long()
         self.suggested_init = torch.cat([self.suggested_init, sample_init_points(self.n_vertices, 20 - self.suggested_init.size(0), random_seed_pair[1])], dim=0)
         self.adjacency_mat = []
