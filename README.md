@@ -1,32 +1,19 @@
-# Bayesian Optimization Learning Combinatorial Structure using Graph Products
+# Graph Bayesian Optimization with Learned Dependencies for Combinatorial Structures (GOLD)
 
 
-## Set up
-
-** Virtual Environment Without conda **
-```
-git clone https://github.com/ChangYong-Oh/GraphDecompositionBO.git
-cd GraphDecompositionBO
-source setup_pip.sh
+## 1. Set up
+#####1. Set a conda virtual environment 
+```bash
+conda create -n GraphDecompositionBO python=3.7 anaconda --yes
 ```
 
-** Virtual Environment With conda **
-```
-conda create -n GraphDecompositionBO python=2.7.14 anaconda --yes
-cd "`which python | xargs dirname | xargs dirname`/envs/GraphDecompositionBO"
-git clone https://github.com/ChangYong-Oh/GraphDecompositionBO.git
-source GraphDecompositionBO/setup_conda.sh
-Default python should be the anaconda python.
+#####2. Clone the repository
+```bash
+git clone https://github.com/QUVA-Lab/GraphDecompositionBO.git
 ```
 
-Different python version is possible. For avaialbe version search
-```
-conda search "^python$"
-```
-
-** Import in existing Python environment **
-
-Or to be able to import this code in an existing Python environment, go:
-```
-pip install -e git+https://github.com/ChangYong-Oh/GraphDecompositionBO.git#egg=GraphDecompositionBO
+#####3. Install required packages
+```bash
+conda activate GraphDecompositionBO
+conda install --file requirements.txt
 ```

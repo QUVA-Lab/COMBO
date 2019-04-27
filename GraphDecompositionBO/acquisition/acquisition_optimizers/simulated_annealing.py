@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 
 from simanneal import Annealer
@@ -5,9 +7,6 @@ from simanneal import Annealer
 from GraphDecompositionBO.acquisition.acquisition_functions import expected_improvement
 from GraphDecompositionBO.acquisition.acquisition_marginalization import acquisition_expectation
 from GraphDecompositionBO.acquisition.acquisition_optimizers.graph_utils import neighbors
-
-
-N_EVAL = 100
 
 
 class GraphSimulatedAnnealing(Annealer):
@@ -45,6 +44,10 @@ class GraphSimulatedAnnealing(Annealer):
         self.eval_history.append(evaluation)
         return evaluation
 
+    # To overwrite unnecessary printing
+    # def update(self, *args, **kwargs):
+    #     pass
+
 
 def simulated_annealing(x_init, inference_samples, partition_samples, edge_mat_samples, n_vertices,
                         acquisition_func, reference=None):
@@ -61,11 +64,12 @@ def simulated_annealing(x_init, inference_samples, partition_samples, edge_mat_s
     """
     sa_runner = GraphSimulatedAnnealing(x_init, inference_samples, partition_samples, edge_mat_samples, n_vertices,
                                         acquisition_func, reference)
-    # configuration equivalent to that of BOCS' SA implementation
-    sa_runner.Tmax = 1.0
-    sa_runner.Tmin = 0.8 ** N_EVAL
-    sa_runner.steps = N_EVAL
+    sa_param = sa_runner.auto(minutes=15.0/60.0, steps=10)
+    sa_runner.steps = sa_param['steps']
+    sa_runner.Tmax = sa_param['tmax']
+    sa_runner.Tmin = sa_param['tmin']
     opt_state, opt_eval = sa_runner.anneal()
+    sys.stdout.flush()
 
     # Annealer.anneal() MINinimzes an objective but acqusition functions should be MAXimized.
     return opt_state, -opt_eval

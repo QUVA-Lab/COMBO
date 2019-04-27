@@ -10,7 +10,7 @@ from GraphDecompositionBO.graphGP.sampler.tool_partition import ind_to_perturb, 
 
 
 def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
-                       log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
+                       log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1, learn_graph=True):
 	"""
 
 	:param model:
@@ -23,6 +23,7 @@ def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
 	:param n_sample:
 	:param n_burn:
 	:param n_thin:
+	:param learn_graph:
 	:return:
 	"""
 	hyper_samples = []
@@ -39,7 +40,6 @@ def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
 	edge_mat_list = [strong_product(adj_mat_list, input_data.new_ones(len(adj_mat_list)), subset) for subset in
 	                 sorted_partition]
 
-	shuffled_partition_ind = []
 	bar = progressbar.ProgressBar(max_value=n_sample * n_thin + n_burn)
 	for s in range(0, n_sample * n_thin + n_burn):
 		# In 'Batched High-dimensional Bayesian Optimization via Structural Kernel Learning',
@@ -48,19 +48,16 @@ def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
 		# Thus, when multiple points are sampled, sweeping all inds for each sample may be not a good practice
 		# For example if there are 50 variables and 10 samples are needed,
 		# then after shuffling indices, and 50/10 thinning can be used.
-		if len(shuffled_partition_ind) == 0:
-			shuffled_partition_ind = range(len(adj_mat_list))
-			np.random.shuffle(shuffled_partition_ind)
-		partition_ind = ind_to_perturb(sorted_partition=partition_sample, n_vertices=n_vertices)
-		# partition_ind = shuffled_partition_ind.pop()
-		gibbs_tuple = gibbs_partition(model, input_data, output_data, n_vertices, adj_mat_list,
-		                              log_beta=log_beta_sample, sorted_partition=partition_sample,
-		                              fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
-		                              edge_mat_list=edge_mat_list, ind=partition_ind)
-		partition_sample, fourier_freq_list, fourier_basis_list, edge_mat_list = gibbs_tuple
-		slice_hyper(model, input_data, output_data, n_vertices, sorted_partition=partition_sample)
+		if learn_graph:
+			partition_ind = ind_to_perturb(sorted_partition=partition_sample, n_vertices=n_vertices)
+			gibbs_tuple = gibbs_partition(model, input_data, output_data, n_vertices, adj_mat_list,
+			                              log_beta=log_beta_sample, sorted_partition=partition_sample,
+			                              fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
+			                              edge_mat_list=edge_mat_list, ind=partition_ind)
+			partition_sample, fourier_freq_list, fourier_basis_list, edge_mat_list = gibbs_tuple
+			slice_hyper(model, input_data, output_data, n_vertices, sorted_partition=partition_sample)
 
-		shuffled_beta_ind = range(len(adj_mat_list))
+		shuffled_beta_ind = list(range(len(adj_mat_list)))
 		np.random.shuffle(shuffled_beta_ind)
 		for beta_ind in shuffled_beta_ind:
 			# In each sampler, model.kernel fourier_freq_list, fourier_basis_list are updated.
