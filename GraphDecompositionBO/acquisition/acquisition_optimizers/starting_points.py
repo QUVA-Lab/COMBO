@@ -9,7 +9,7 @@ from GraphDecompositionBO.acquisition.acquisition_functions import expected_impr
 
 N_RANDOM_VERTICES = 20000
 N_GREEDY_ASCENT_INIT = 20
-N_SPRAY = 10
+N_SPRAY = 5
 
 
 def optim_inits(x_opt, inference_samples, partition_samples, edge_mat_samples, n_vertices, acquisition_func=expected_improvement, reference=None):
@@ -34,9 +34,9 @@ def optim_inits(x_opt, inference_samples, partition_samples, edge_mat_samples, n
     x_init_candidates = x_init_candidates[nonnan_ind]
     acquisition_values = acquisition_values[nonnan_ind]
 
-    _, acquisition_sort_ind = torch.sort(acquisition_values.squeeze(1), descending=True)
+    acquisition_sorted, acquisition_sort_ind = torch.sort(acquisition_values.squeeze(1), descending=True)
     x_init_candidates = x_init_candidates[acquisition_sort_ind]
 
-    return x_init_candidates[:N_GREEDY_ASCENT_INIT]
+    return x_init_candidates[:N_GREEDY_ASCENT_INIT], acquisition_sorted[:N_GREEDY_ASCENT_INIT]
 
 

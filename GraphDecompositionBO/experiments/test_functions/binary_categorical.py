@@ -60,11 +60,11 @@ def ising_dense(interaction_original, interaction_sparsified, covariance, partit
 
 
 def _bocs_consistency_mapping(x):
-    '''
+    """
     This is for the comparison with BOCS implementation
     :param x:
     :return:
-    '''
+    """
     horizontal_ind = [0, 2, 4, 7, 9, 11, 14, 16, 18, 21, 22, 23]
     vertical_ind = sorted([elm for elm in range(24) if elm not in horizontal_ind])
     return x[horizontal_ind].reshape((ISING_GRID_H, ISING_GRID_W - 1)), x[vertical_ind].reshape((ISING_GRID_H - 1, ISING_GRID_W))
@@ -78,7 +78,7 @@ class Ising(object):
         self.lamda = 0.01
         self.n_vertices = np.array([2] * ISING_N_EDGES)
         self.suggested_init = torch.empty(0).long()
-        self.suggested_init = torch.cat([self.suggested_init, sample_init_points([2] * ISING_N_EDGES, 20 - self.suggested_init.size(0), random_seed_pair[1]).long()], dim=0)
+        self.suggested_init = torch.cat([self.suggested_init, sample_init_points(self.n_vertices, 20 - self.suggested_init.size(0), random_seed_pair[1]).long()], dim=0)
         self.adjacency_mat = []
         self.fourier_freq = []
         self.fourier_basis = []

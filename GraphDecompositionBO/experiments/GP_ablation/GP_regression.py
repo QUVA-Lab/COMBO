@@ -21,7 +21,7 @@ from GraphDecompositionBO.experiments.GP_ablation.data_loader import load_highor
 
 
 def COMBO_GP_sample(model, input_data, output_data, n_vertices, adj_mat_list, log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
-	'''
+	"""
 	:param model:
 	:param input_data:
 	:param output_data:
@@ -34,7 +34,7 @@ def COMBO_GP_sample(model, input_data, output_data, n_vertices, adj_mat_list, lo
 	:param n_thin:
 
 	:return:
-	'''
+	"""
 	hyper_samples = []
 	log_beta_samples = []
 	partition_samples = []
@@ -74,7 +74,7 @@ def COMBO_GP_sample(model, input_data, output_data, n_vertices, adj_mat_list, lo
 
 
 def GOLD_GP_sample(model, input_data, output_data, n_vertices, adj_mat_list, log_beta, sorted_partition, n_sample, n_burn=0, n_thin=1):
-	'''
+	"""
 	:param model:
 	:param input_data:
 	:param output_data:
@@ -87,7 +87,7 @@ def GOLD_GP_sample(model, input_data, output_data, n_vertices, adj_mat_list, log
 	:param n_thin:
 
 	:return:
-	'''
+	"""
 	hyper_samples = []
 	log_beta_samples = []
 	partition_samples = []

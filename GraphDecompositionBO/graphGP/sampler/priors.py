@@ -16,12 +16,12 @@ GRAPH_SIZE_LIMIT = 1024 + 2
 
 
 def log_prior_constmean(constmean, output_min, output_max):
-	'''
+	"""
 	:param constmean: numeric(float)
 	:param output_min: numeric(float)
 	:param output_max: numeric(float)
 	:return:
-	'''
+	"""
 	output_mid = (output_min + output_max) / 2.0
 	stable_dev = (output_max - output_min) * STABLE_MEAN_RNG / 2.0
 	# Unstable parameter in sampling
@@ -40,11 +40,18 @@ def log_prior_noisevar(log_noise_var):
 
 
 def log_prior_kernelamp(log_amp, output_var, kernel_min, kernel_max):
+	"""
+
+	:param log_amp:
+	:param output_var: numeric(float)
+	:param kernel_min: numeric(float)
+	:param kernel_max: numeric(float)
+	:return:
+	"""
 	if log_amp < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(10000.0)) < log_amp:
 		return -float('inf')
-	# LogNormal
 	log_amp_lower = np.log(output_var / kernel_max)
-	log_amp_upper = np.log(output_var / kernel_min)
+	log_amp_upper = np.log(output_var / max(kernel_min, 1e-100))
 	log_amp_mid = 0.5 * (log_amp_upper + log_amp_lower)
 	log_amp_std = 0.5 * (log_amp_upper - log_amp_lower) / 2.0
 	return -np.log(log_amp_std) - 0.5 * (log_amp - log_amp_mid) ** 2 / log_amp_std ** 2
@@ -57,14 +64,16 @@ def log_prior_kernelamp(log_amp, output_var, kernel_min, kernel_max):
 	# return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * log_amp - rate * np.exp(log_amp)
 
 
-def log_prior_edgeweight(log_beta_i, ind, sorted_partition):
-	'''
+def log_prior_edgeweight(log_beta_i, dim):
+	"""
+
 	:param log_beta_i: numeric(float), ind-th element of 'log_beta'
-	:return: numeric(float)
-	'''
+	:param dim:
+	:return:
+	"""
 	# Gamma prior
 	shape = 1.0
-	rate = 1.0 / len(sorted_partition) ** 0.5
+	rate = 1.0 / dim ** 0.5
 	if log_beta_i < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(10000.0)) < log_beta_i:
 		return -float('inf')
 	return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * log_beta_i - rate * np.exp(log_beta_i)
@@ -76,13 +85,14 @@ def log_prior_edgeweight(log_beta_i, ind, sorted_partition):
 
 
 def log_prior_partition(sorted_partition, n_vertices):
-	'''
+	"""
 	Log of unnormalized density of given partition
 	this prior prefers well-spread partition, which is quantified by induced entropy.
 	Density is proportional to the entropy of a unnormalized probability vector consisting of [log(n_vertices in subgraph_i)]_i=1...N
 	:param sorted_partition:
+	:param n_vertices:
 	:return:
-	'''
+	"""
 	if len(sorted_partition) == 1 or compute_group_size(sorted_partition=sorted_partition, n_vertices=n_vertices) > GRAPH_SIZE_LIMIT:
 		return -float('inf')
 	else:

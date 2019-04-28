@@ -33,14 +33,14 @@ def _delay_min_max(transportation):
 
 
 def _cs_factors(curr_visit, adjusted_citywise_satisfaction, visit_history):
-	'''
+	"""
 	adjusted_citywise_satisfaction: normally values lie between 70, 120
 	thus cs_mean, cs_max, cs_prev are in the similar scale
 	:param curr_visit:
 	:param adjusted_citywise_satisfaction:
 	:param visit_history:
 	:return:
-	'''
+	"""
 	cs_curr = adjusted_citywise_satisfaction[curr_visit - 1]
 	if len(visit_history) > 0:
 		cs_mean = cs_curr - np.mean(adjusted_citywise_satisfaction[np.array(visit_history) - 1])
@@ -79,14 +79,14 @@ def _tas_factors(curr_visit, tourism_attractions_similarity, visit_history, tas_
 
 
 def _tas_adjust_cs(curr_visit, adjusted_citywise_satisfaction, tas_mean, tas_accum):
-	'''
+	"""
 	RANDOM component should be scaled properly, not to make evaluation too noisy
 	:param curr_visit:
 	:param adjusted_citywise_satisfaction:
 	:param tas_mean:
 	:param tas_accum:
 	:return:
-	'''
+	"""
 	# this influences the stability and dynamics of the evaluation greatly
 	randomness_scaling = 2.0
 	cs_curr = adjusted_citywise_satisfaction[curr_visit - 1]
@@ -98,14 +98,14 @@ def _tas_to_fs(tas_mean, tas_prev):
 
 
 def _tpt_next(curr_city, travel_choice, transportation_type, delay_prob):
-	'''
+	"""
 	RANDOM component should be scaled properly, not to make evaluation too noisy
 	:param x:
 	:param curr_city:
 	:param transportation_type:
 	:param delay_prob:
 	:return:
-	'''
+	"""
 	ind = np.min(np.where(np.cumsum(transportation_type[:, curr_city - 1].flatten()) == travel_choice + 1)[0])
 	transportation = ind // TRAVEL_N_CITIES
 	next_city = ind % TRAVEL_N_CITIES + 1 # the city should be between 1 and TRAVEL_N_CITIES

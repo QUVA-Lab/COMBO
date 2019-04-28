@@ -10,7 +10,7 @@ from GraphDecompositionBO.graphGP.sampler.priors import log_prior_edgeweight
 
 def slice_edgeweight(model, input_data, output_data, n_vertices, adj_mat_list, log_beta,
                      sorted_partition, fourier_freq_list, fourier_basis_list, ind):
-    '''
+    """
     Slice sampling the edgeweight(exp('log_beta')) at 'ind' in 'log_beta' vector
     Note that model.kernel members (fourier_freq_list, fourier_basis_list) are updated.
     :param model:
@@ -24,7 +24,7 @@ def slice_edgeweight(model, input_data, output_data, n_vertices, adj_mat_list, l
     :param fourier_basis_list:
     :param ind:
     :return:
-    '''
+    """
     updated_subset_ind = [(ind in subset) for subset in sorted_partition].index(True)
     updated_subset = sorted_partition[updated_subset_ind]
     n_pre = updated_subset.index(ind)
@@ -46,12 +46,12 @@ def slice_edgeweight(model, input_data, output_data, n_vertices, adj_mat_list, l
     inference = Inference(train_data=(grouped_input_data, output_data), model=model)
 
     def logp(log_beta_i):
-        '''
+        """
         Note that model.kernel members (fourier_freq_list, fourier_basis_list) are updated.
         :param log_beta_i: numeric(float)
         :return: numeric(float)
-        '''
-        log_prior = log_prior_edgeweight(log_beta_i, ind=ind, sorted_partition=sorted_partition)
+        """
+        log_prior = log_prior_edgeweight(log_beta_i, dim=input_data.size(1))
         if np.isinf(log_prior):
             return log_prior
         fourier_freq, fourier_basis = fourier_update(adj_mat=adj_mat_list[ind], log_beta_i=log_beta_i, prefix_id_added=prefix_id_added, suffix_id_added=suffix_id_added)

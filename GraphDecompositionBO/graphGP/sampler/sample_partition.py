@@ -15,7 +15,7 @@ def gibbs_partition(model, input_data, output_data, n_vertices, adj_mat_list, lo
 	:param model:
 	:param input_data:
 	:param output_data:
-	:param n_vertices:  1d np.array
+	:param n_vertices: 1d np.array
 	:param adj_mat_list: list of 2D torch.Tensor of adjacency matrix of base subgraphs
 	:param log_beta:
 	:param sorted_partition: Partition of {0, ..., K-1}, list of subsets(list)

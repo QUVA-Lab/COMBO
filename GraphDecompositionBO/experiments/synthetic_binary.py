@@ -24,11 +24,11 @@ def generate_function_on_highorderbinary(n_variables, highest_order, random_seed
 
 
 def highorder_interaction_function(x, interaction_coef):
-	'''
+	"""
 	:param x: np.array 2 dimensional array
 	:param interaction: list of tuple, tuple of interactions and coefficient
 	:return:
-	'''
+	"""
 	output = 0
 	for interaction, coef in interaction_coef:
 		output += np.any(x[:, interaction], axis=1) * coef

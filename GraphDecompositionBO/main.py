@@ -1,4 +1,3 @@
-import sys
 import time
 import argparse
 
@@ -44,7 +43,8 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
 		exp_dir = experiment_directory()
 		objective_name = '_'.join([objective.__class__.__name__,
 		                           objective.random_seed_info if hasattr(objective, 'random_seed_info') else 'none',
-		                           ('%.1E' % objective.lamda) if hasattr(objective, 'lamda') else ''])
+		                           ('%.1E' % objective.lamda) if hasattr(objective, 'lamda') else '',
+		                           'GOLD' if learn_graph else 'COMBO'])
 		model_filename, data_cfg_filaname, logfile_dir = model_data_filenames(exp_dir=exp_dir,
 		                                                                      objective_name=objective_name)
 
@@ -75,7 +75,7 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
 		surrogate_model.init_param(eval_outputs)
 		print('Burn-in')
 		sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
-		                                      log_beta, sorted_partition, n_sample=1, n_burn=2, n_thin=1,
+		                                      log_beta, sorted_partition, n_sample=1, n_burn=99, n_thin=1,
 		                                      learn_graph=learn_graph)
 		log_beta = sample_posterior[1][0]
 		sorted_partition = sample_posterior[2][0]
@@ -137,6 +137,7 @@ if __name__ == '__main__':
 	parallel_ = kwag_['parallel']
 	kwag_['learn_graph'] = not kwag_['no_graph_learning']
 	del kwag_['no_graph_learning']
+	print(kwag_)
 
 	assert (path_ is None) != (objective_ is None)
 	if objective_ == 'ising':

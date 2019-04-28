@@ -2,14 +2,14 @@ import numpy as np
 
 
 def univariate_slice_sampling(logp, x0, width=1.0, max_steps_out=10):
-    '''
+    """
     Univariate Slice Sampling using doubling scheme
     :param logp: numeric(float) -> numeric(float), a log density function
     :param x0: numeric(float)
     :param width:
     :param max_steps_out:
     :return: numeric(float), sampled x1
-    '''
+    """
     for scaled_width in np.array([0.9, 0.8, 0.7, 0.6, 0.4, 0.3, 0.2, 0.1]) * width:
 
         lower = x0 - scaled_width * np.random.rand()

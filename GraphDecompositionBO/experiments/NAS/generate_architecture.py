@@ -51,10 +51,10 @@ class NodeId(nn.Module):
 
 
 def valid_connectivity(connectivity):
-	'''
+	"""
 	:param connectivity: np.array
 	:return:
-	'''
+	"""
 	assert connectivity.size(0) == connectivity.size(1) == N_NODES
 	assert torch.sum(torch.tril(connectivity) ** 2) == 0
 	queue = [0]
@@ -71,11 +71,11 @@ def valid_connectivity(connectivity):
 
 class Cell(nn.Module):
 	def __init__(self, node_type, connectivity, output_node_type, n_channels):
-		'''
+		"""
 		:param node_type: list of binary 0-1
 		:param connectivity: np.array
 		:param n_channels:
-		'''
+		"""
 		assert len(node_type) == N_NODES - 2
 		assert output_node_type in [0, 1]
 		self.connectivity = connectivity
@@ -103,10 +103,10 @@ class Cell(nn.Module):
 
 class CNN(nn.Module):
 	def __init__(self, node_type, connectivity):
-		'''
+		"""
 		:param node_type: list of binary 0-1
 		:param connectivity: np.array
-		'''
+		"""
 		assert valid_connectivity(connectivity)
 		self.cell1 = Cell(node_type=node_type, connectivity=connectivity, n_channels=IN_CH)
 		self.maxpool1 = nn.MaxPool2d(kernel_size=2)
