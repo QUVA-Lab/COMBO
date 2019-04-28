@@ -1,10 +1,9 @@
 import sys
 import time
-import psutil
 
 import numpy as np
 
-import torch.multiprocessing as multiprocessing
+import torch.multiprocessing as mp
 
 from GraphDecompositionBO.acquisition.acquisition_optimizers.starting_points import optim_inits
 from GraphDecompositionBO.acquisition.acquisition_optimizers.greedy_ascent import greedy_ascent
@@ -18,7 +17,8 @@ MAX_N_ASCENT = float('inf')
 def next_evaluation(x_opt, input_data, inference_samples, partition_samples, edge_mat_samples, n_vertices,
                     acquisition_func=expected_improvement, reference=None, parallel=None):
     """
-
+    In case of '[Errno 24] Too many open files', check 'nofile' limit by typing 'ulimit -n' in a terminal
+    if it is too small then change
     :param x_opt: 1D Tensor
     :param input_data:
     :param inference_samples:
@@ -26,8 +26,7 @@ def next_evaluation(x_opt, input_data, inference_samples, partition_samples, edg
     :param edge_mat_samples:
     :param n_vertices:
     :param acquisition_func:
-    :param reference:
-    :param verbose:
+    :param reference: numeric(float)
     :param parallel:
     :return:
     """
@@ -48,62 +47,63 @@ def next_evaluation(x_opt, input_data, inference_samples, partition_samples, edg
     print('Acqusition function optimization with %2d inits %s has begun'
           % (x_inits.size(0), time.strftime('%H:%M:%S', time.gmtime(start_time))))
 
-    opt_vrt = []
-    opt_acq = []
     if parallel:
-        print('\tGreedy Ascent began at %s' % time.strftime('%H:%M:%S', time.gmtime()))
-        pool = multiprocessing.Pool(int(psutil.cpu_count() / 4))
-        results = []
-        for i in range(n_inits):
-            args_ga = (x_inits[i], inference_samples, partition_samples, edge_mat_samples,
-                       n_vertices, acquisition_func, MAX_N_ASCENT, reference)
-            results.append(pool.apply_async(greedy_ascent, args=args_ga))
-        for res_vrt, res_acq in [res.get() for res in results]:
-            if not np.isnan(res_acq) and not (input_data == res_vrt).all(dim=1).any():
-                opt_vrt.append(res_vrt)
-                opt_acq.append(res_acq)
-        pool.close()
-        pool.join()
-        print('\tGreedy Ascent finished at %s' % time.strftime('%H:%M:%S', time.gmtime()))
-        print(opt_acq)
-        print('\tAdditional Optim. using Simulated Annealing begans at %s' % time.strftime('%H:%M:%S', time.gmtime()))
-        pool = multiprocessing.Pool(int(psutil.cpu_count() / 4))
-        results = []
-        for i, (vrt, acq) in enumerate(zip(opt_vrt, opt_acq)):
-            args_sa = (vrt, inference_samples, partition_samples, edge_mat_samples, n_vertices,
-                       acquisition_func, reference)
-            results.append(pool.apply_async(simulated_annealing, args=args_sa))
-        for res_vrt, res_acq in [res.get() for res in results]:
-            if not np.isnan(res_acq) and res_acq >= opt_acq[i] and not (input_data == res_vrt).all(dim=1).any():
-                opt_vrt[i] = res_vrt
-                opt_acq[i] = res_acq
-        pool.close()
-        pool.join()
-        print('\tAdditional Optim. using Simulated Annealing finished at %s' % time.strftime('%H:%M:%S', time.gmtime()))
-        print(opt_acq)
+        ga_args_list = [(x_inits[i], inference_samples, partition_samples, edge_mat_samples,
+                         n_vertices, acquisition_func, MAX_N_ASCENT, reference) for i in range(n_inits)]
+        ga_start_time = time.time()
+        sys.stdout.write('\tGreedy Ascent  began at %s ' % time.strftime('%H:%M:%S', time.gmtime(ga_start_time)))
+        with mp.Pool(processes=n_inits) as pool:
+            ga_result = pool.starmap(greedy_ascent, ga_args_list)
+        ga_opt_vrt = [elm[0] for elm in ga_result]
+        ga_opt_acq = [elm[1] for elm in ga_result]
+        for i in range(n_inits-1, -1, -1):
+            if np.isnan(ga_opt_acq[i]) or (input_data == ga_opt_vrt[i]).all(dim=1).any():
+                ga_opt_vrt.pop(i)
+                ga_opt_acq.pop(i)
+        sys.stdout.write('and took %s\n' % time.strftime('%H:%M:%S', time.gmtime(time.time() - ga_start_time)))
+        print('\tFrom Greedy Ascent  : ' + (','.join([('%5.2f' % elm) for elm in ga_opt_acq])))
+
+        n_inits_sa = len(ga_opt_acq)
+        sa_args_list = [(ga_opt_vrt[i], inference_samples, partition_samples, edge_mat_samples,
+                         n_vertices, acquisition_func, reference) for i in range(n_inits_sa)]
+        sa_start_time = time.time()
+        sys.stdout.write('\tSim. Annealing began at %s ' % time.strftime('%H:%M:%S', time.gmtime(sa_start_time)))
+        with mp.Pool(processes=n_inits_sa) as pool:
+            sa_result = pool.starmap(simulated_annealing, sa_args_list)
+        sa_opt_vrt = [elm[0] for elm in sa_result]
+        sa_opt_acq = [elm[1] for elm in sa_result]
+        for i in range(n_inits_sa-1, -1, -1):
+            if np.isnan(sa_opt_acq[i]) or (input_data == sa_opt_vrt[i]).all(dim=1).any() or ga_opt_acq[i] > sa_opt_acq[i]:
+                sa_opt_vrt[i] = ga_opt_vrt[i]
+                sa_opt_acq[i] = ga_opt_acq[i]
+        sys.stdout.write('and took %s\n' % time.strftime('%H:%M:%S', time.gmtime(time.time() - sa_start_time)))
+        print('\tAdditional Sim. Ann.: ' + (','.join([('%5.2f' % elm) for elm in sa_opt_acq])))
     else:
+        ga_opt_vrt = []
+        ga_opt_acq = []
         print('\tGreedy Ascent began at %s' % time.strftime('%H:%M:%S', time.gmtime()))
         for i in range(n_inits):
             max_vrt_ga, max_acq_ga = greedy_ascent(x_inits[i], inference_samples, partition_samples, edge_mat_samples,
                                                    n_vertices, acquisition_func, MAX_N_ASCENT, reference)
             if not np.isnan(max_acq_ga) and not (input_data == max_vrt_ga).all(dim=1).any():
-                opt_vrt.append(max_vrt_ga)
-                opt_acq.append(max_acq_ga)
-        print('\tGreedy Ascent finished at %s' % time.strftime('%H:%M:%S', time.gmtime()))
-        print('\tAdditional Optim. using Simulated Annealing begans at %s' % time.strftime('%H:%M:%S', time.gmtime()))
-        for i, (vrt, acq) in enumerate(zip(opt_vrt, opt_acq)):
-            max_vrt_sa, max_acq_sa = simulated_annealing(vrt, inference_samples, partition_samples,
+                ga_opt_vrt.append(max_vrt_ga)
+                ga_opt_acq.append(max_acq_ga)
+
+        sa_opt_vrt = []
+        sa_opt_acq = []
+        print('\tAdditional Optim. using Simulated Annealing began at %s' % time.strftime('%H:%M:%S', time.gmtime()))
+        for i in range(len(ga_opt_acq)):
+            max_vrt_sa, max_acq_sa = simulated_annealing(ga_opt_vrt[i], inference_samples, partition_samples,
                                                          edge_mat_samples, n_vertices, acquisition_func, reference)
-            if not np.isnan(max_acq_sa) and max_acq_sa >= opt_acq[i] and not (input_data == max_vrt_sa).all(dim=1).any():
-                opt_vrt[i] = max_vrt_sa
-                opt_acq[i] = max_acq_sa
-        print('\tAdditional Optim. using Simulated Annealing finished at %s' % time.strftime('%H:%M:%S', time.gmtime()))
+            if not np.isnan(max_acq_sa) and not (input_data == max_vrt_sa).all(dim=1).any():
+                sa_opt_vrt.append(max_vrt_sa if max_acq_sa > ga_opt_acq[i] else ga_opt_vrt[i])
+                sa_opt_acq.append(max_acq_sa if max_acq_sa > ga_opt_acq[i] else ga_opt_acq[i])
 
     end_time = time.time()
     elapsed_time = end_time - start_time
     print('Acqusition function optimization ended %s(%s)'
           % (time.strftime('%H:%M:%S', time.gmtime(end_time)), time.strftime('%H:%M:%S', time.gmtime(elapsed_time))))
 
-    suggestion = opt_vrt[np.nanargmax(opt_acq)]
+    suggestion = sa_opt_vrt[np.nanargmax(sa_opt_acq)]
     mean, std, var = suggestion_statistic(suggestion, inference_samples, partition_samples, n_vertices)
     return suggestion, mean, std, var

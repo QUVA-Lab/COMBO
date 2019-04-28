@@ -1,5 +1,3 @@
-import sys
-
 import numpy as np
 
 from simanneal import Annealer
@@ -45,8 +43,8 @@ class GraphSimulatedAnnealing(Annealer):
         return evaluation
 
     # To overwrite unnecessary printing
-    # def update(self, *args, **kwargs):
-    #     pass
+    def update(self, *args, **kwargs):
+        pass
 
 
 def simulated_annealing(x_init, inference_samples, partition_samples, edge_mat_samples, n_vertices,
@@ -69,7 +67,6 @@ def simulated_annealing(x_init, inference_samples, partition_samples, edge_mat_s
     sa_runner.Tmax = sa_param['tmax']
     sa_runner.Tmin = sa_param['tmin']
     opt_state, opt_eval = sa_runner.anneal()
-    sys.stdout.flush()
 
     # Annealer.anneal() MINinimzes an objective but acqusition functions should be MAXimized.
     return opt_state, -opt_eval

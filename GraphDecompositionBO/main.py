@@ -79,7 +79,7 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
 		                                      learn_graph=learn_graph)
 		log_beta = sample_posterior[1][0]
 		sorted_partition = sample_posterior[2][0]
-		sys.stdout.flush()
+		print('')
 	else:
 		surrogate_model, cfg_data, logfile_dir = load_model_data(path, exp_dir=experiment_directory())
 
@@ -92,13 +92,13 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
 		hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples = sample_posterior
 		log_beta = log_beta_samples[-1]
 		sorted_partition = partition_samples[-1]
+		print('')
 
 		x_opt = eval_inputs[torch.argmin(eval_outputs)]
 		inference_samples = inference_sampling(eval_inputs, eval_outputs, n_vertices,
 		                                       hyper_samples, partition_samples, freq_samples, basis_samples)
 		suggestion = next_evaluation(x_opt, eval_inputs, inference_samples, partition_samples, edge_mat_samples,
-		                             n_vertices,
-		                             acquisition_func, reference, parallel)
+		                             n_vertices, acquisition_func, reference, parallel)
 		next_eval, pred_mean, pred_std, pred_var = suggestion
 
 		eval_inputs = torch.cat([eval_inputs, next_eval.view(1, -1)], 0)
@@ -113,9 +113,9 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
 
 		displaying_and_logging(logfile_dir, eval_inputs, eval_outputs,
 		                       pred_mean_list, pred_std_list, pred_var_list, time_list, elapse_list)
-		print('Optimizing %s with regularization %.2E up to %4d visualization random seed : %s' %
-		      (objective.__class__.__name__, objective.lamda if hasattr(objective, 'lamda') else 0, n_eval,
-		       objective.random_seed_info if hasattr(objective, 'random_seed_info') else 'none'))
+		print('Optimizing %s with regularization %.2E up to %4d visualization random seed : %s'
+		      % (objective.__class__.__name__, objective.lamda if hasattr(objective, 'lamda') else 0, n_eval,
+		         objective.random_seed_info if hasattr(objective, 'random_seed_info') else 'none'))
 
 
 if __name__ == '__main__':

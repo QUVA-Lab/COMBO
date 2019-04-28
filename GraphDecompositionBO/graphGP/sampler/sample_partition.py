@@ -48,7 +48,7 @@ def gibbs_partition(model, input_data, output_data, n_vertices, adj_mat_list, lo
 					fourier_freq, fourier_basis, edge_mat = eigen_decompositions[tuple(subset)]
 				except KeyError:
 					adj_mat = strong_product(adj_mat_list=adj_mat_list, beta=torch.exp(log_beta), subset=subset)
-					edge_mat = adj_mat > 0
+					edge_mat = (adj_mat > 0).float()
 					deg_mat = torch.diag(torch.sum(adj_mat, dim=0))
 					laplacian = deg_mat - adj_mat
 					fourier_freq, fourier_basis = torch.symeig(laplacian, eigenvectors=True)
