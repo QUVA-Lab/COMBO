@@ -11,161 +11,166 @@ from GraphDecompositionBO.acquisition.acquisition_optimization import next_evalu
 from GraphDecompositionBO.acquisition.acquisition_functions import expected_improvement
 from GraphDecompositionBO.acquisition.acquisition_marginalization import inference_sampling
 
-from GraphDecompositionBO.utils import experiment_directory, model_data_filenames, load_model_data, \
-	displaying_and_logging
+from GraphDecompositionBO.config import experiment_directory
+from GraphDecompositionBO.utils import model_data_filenames, load_model_data, displaying_and_logging
 
-from GraphDecompositionBO.experiments.test_functions.experiment_configuration import generate_random_seed_pair_ising, \
-	generate_random_seed_pair_contamination, generate_random_seed_pestcontrol, generate_random_seed_pair_centroid
+from GraphDecompositionBO.experiments.random_seed_config import generate_random_seed_pair_ising, \
+    generate_random_seed_pair_contamination, generate_random_seed_pestcontrol, generate_random_seed_pair_centroid, \
+    generate_random_seed_maxsat
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import Ising, Contamination
 from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PestControl, Centroid
+from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSAT28, MaxSAT43, MaxSAT60
 
 
 def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True, **kwargs):
-	"""
+    """
 
-	:param objective:
-	:param n_eval:
-	:param path:
-	:param parallel:
-	:param learn_graph:
-	:param kwargs:
-	:return:
-	"""
-	# GOLD continues from info given in 'path' or starts minimization of 'objective'
-	assert (path is None) != (objective is None)
-	acquisition_func = expected_improvement
+    :param objective:
+    :param n_eval:
+    :param path:
+    :param parallel:
+    :param learn_graph:
+    :param kwargs:
+    :return:
+    """
+    # GOLD continues from info given in 'path' or starts minimization of 'objective'
+    assert (path is None) != (objective is None)
+    acquisition_func = expected_improvement
 
-	n_vertices = adj_mat_list = None
-	eval_inputs = eval_outputs = log_beta = sorted_partition = None
-	time_list = elapse_list = pred_mean_list = pred_std_list = pred_var_list = None
+    n_vertices = adj_mat_list = None
+    eval_inputs = eval_outputs = log_beta = sorted_partition = None
+    time_list = elapse_list = pred_mean_list = pred_std_list = pred_var_list = None
 
-	if objective is not None:
-		exp_dir = experiment_directory()
-		objective_name = '_'.join([objective.__class__.__name__,
-		                           objective.random_seed_info if hasattr(objective, 'random_seed_info') else 'none',
-		                           ('%.1E' % objective.lamda) if hasattr(objective, 'lamda') else '',
-		                           'GOLD' if learn_graph else 'COMBO'])
-		model_filename, data_cfg_filaname, logfile_dir = model_data_filenames(exp_dir=exp_dir,
-		                                                                      objective_name=objective_name)
+    if objective is not None:
+        exp_dir = experiment_directory()
+        objective_name = '_'.join([objective.__class__.__name__,
+                                   objective.random_seed_info if hasattr(objective, 'random_seed_info') else 'none',
+                                   ('%.1E' % objective.lamda) if hasattr(objective, 'lamda') else '',
+                                   'GOLD' if learn_graph else 'COMBO'])
+        model_filename, data_cfg_filaname, logfile_dir = model_data_filenames(exp_dir=exp_dir,
+                                                                              objective_name=objective_name)
 
-		n_vertices = objective.n_vertices
-		adj_mat_list = objective.adjacency_mat
-		fourier_freq_list = objective.fourier_freq
-		fourier_basis_list = objective.fourier_basis
-		suggested_init = objective.suggested_init  # suggested_init should be 2d tensor
-		n_init = suggested_init.size(0)
+        n_vertices = objective.n_vertices
+        adj_mat_list = objective.adjacency_mat
+        fourier_freq_list = objective.fourier_freq
+        fourier_basis_list = objective.fourier_basis
+        suggested_init = objective.suggested_init  # suggested_init should be 2d tensor
+        n_init = suggested_init.size(0)
 
-		kernel = DiffusionKernel(fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list)
-		surrogate_model = GPRegression(kernel=kernel)
+        kernel = DiffusionKernel(fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list)
+        surrogate_model = GPRegression(kernel=kernel)
 
-		eval_inputs = suggested_init
-		eval_outputs = torch.zeros(eval_inputs.size(0), 1, device=eval_inputs.device)
-		for i in range(eval_inputs.size(0)):
-			eval_outputs[i] = objective.evaluate(eval_inputs[i])
-		assert not torch.isnan(eval_outputs).any()
-		log_beta = eval_outputs.new_zeros(eval_inputs.size(1))
-		sorted_partition = [[m] for m in range(eval_inputs.size(1))]
+        eval_inputs = suggested_init
+        eval_outputs = torch.zeros(eval_inputs.size(0), 1, device=eval_inputs.device)
+        for i in range(eval_inputs.size(0)):
+            eval_outputs[i] = objective.evaluate(eval_inputs[i])
+        assert not torch.isnan(eval_outputs).any()
+        log_beta = eval_outputs.new_zeros(eval_inputs.size(1))
+        sorted_partition = [[m] for m in range(eval_inputs.size(1))]
 
-		time_list = [time.time()] * n_init
-		elapse_list = [0] * n_init
-		pred_mean_list = [0] * n_init
-		pred_std_list = [0] * n_init
-		pred_var_list = [0] * n_init
+        time_list = [time.time()] * n_init
+        elapse_list = [0] * n_init
+        pred_mean_list = [0] * n_init
+        pred_std_list = [0] * n_init
+        pred_var_list = [0] * n_init
 
-		surrogate_model.init_param(eval_outputs)
-		print('Burn-in')
-		sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
-		                                      log_beta, sorted_partition, n_sample=1, n_burn=99, n_thin=1,
-		                                      learn_graph=learn_graph)
-		log_beta = sample_posterior[1][0]
-		sorted_partition = sample_posterior[2][0]
-		print('')
-	else:
-		surrogate_model, cfg_data, logfile_dir = load_model_data(path, exp_dir=experiment_directory())
+        surrogate_model.init_param(eval_outputs)
+        print('Burn-in')
+        sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
+                                              log_beta, sorted_partition, n_sample=1, n_burn=99, n_thin=1,
+                                              learn_graph=learn_graph)
+        log_beta = sample_posterior[1][0]
+        sorted_partition = sample_posterior[2][0]
+        print('')
+    else:
+        surrogate_model, cfg_data, logfile_dir = load_model_data(path, exp_dir=experiment_directory())
 
-	for _ in range(n_eval):
-		reference = torch.min(eval_outputs, dim=0)[0].item()
-		print('Sampling')
-		sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
-		                                      log_beta, sorted_partition, n_sample=10, n_burn=0, n_thin=1,
-		                                      learn_graph=learn_graph)
-		hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples = sample_posterior
-		log_beta = log_beta_samples[-1]
-		sorted_partition = partition_samples[-1]
-		print('')
+    for _ in range(n_eval):
+        reference = torch.min(eval_outputs, dim=0)[0].item()
+        print('Sampling')
+        sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
+                                              log_beta, sorted_partition, n_sample=10, n_burn=0, n_thin=1,
+                                              learn_graph=learn_graph)
+        hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples = sample_posterior
+        log_beta = log_beta_samples[-1]
+        sorted_partition = partition_samples[-1]
+        print('')
 
-		x_opt = eval_inputs[torch.argmin(eval_outputs)]
-		inference_samples = inference_sampling(eval_inputs, eval_outputs, n_vertices,
-		                                       hyper_samples, partition_samples, freq_samples, basis_samples)
-		suggestion = next_evaluation(x_opt, eval_inputs, inference_samples, partition_samples, edge_mat_samples,
-		                             n_vertices, acquisition_func, reference, parallel)
-		next_eval, pred_mean, pred_std, pred_var = suggestion
+        x_opt = eval_inputs[torch.argmin(eval_outputs)]
+        inference_samples = inference_sampling(eval_inputs, eval_outputs, n_vertices,
+                                               hyper_samples, partition_samples, freq_samples, basis_samples)
+        suggestion = next_evaluation(x_opt, eval_inputs, inference_samples, partition_samples, edge_mat_samples,
+                                     n_vertices, acquisition_func, reference, parallel)
+        next_eval, pred_mean, pred_std, pred_var = suggestion
 
-		eval_inputs = torch.cat([eval_inputs, next_eval.view(1, -1)], 0)
-		eval_outputs = torch.cat([eval_outputs, objective.evaluate(eval_inputs[-1]).view(1, 1)])
-		assert not torch.isnan(eval_outputs).any()
+        eval_inputs = torch.cat([eval_inputs, next_eval.view(1, -1)], 0)
+        eval_outputs = torch.cat([eval_outputs, objective.evaluate(eval_inputs[-1]).view(1, 1)])
+        assert not torch.isnan(eval_outputs).any()
 
-		time_list.append(time.time())
-		elapse_list.append(time_list[-1] - time_list[-2])
-		pred_mean_list.append(pred_mean.item())
-		pred_std_list.append(pred_std.item())
-		pred_var_list.append(pred_var.item())
+        time_list.append(time.time())
+        elapse_list.append(time_list[-1] - time_list[-2])
+        pred_mean_list.append(pred_mean.item())
+        pred_std_list.append(pred_std.item())
+        pred_var_list.append(pred_var.item())
 
-		displaying_and_logging(logfile_dir, eval_inputs, eval_outputs,
-		                       pred_mean_list, pred_std_list, pred_var_list, time_list, elapse_list)
-		print('Optimizing %s with regularization %.2E up to %4d visualization random seed : %s'
-		      % (objective.__class__.__name__, objective.lamda if hasattr(objective, 'lamda') else 0, n_eval,
-		         objective.random_seed_info if hasattr(objective, 'random_seed_info') else 'none'))
+        displaying_and_logging(logfile_dir, eval_inputs, eval_outputs,
+                               pred_mean_list, pred_std_list, pred_var_list, time_list, elapse_list)
+        print('Optimizing %s with regularization %.2E up to %4d visualization random seed : %s'
+              % (objective.__class__.__name__, objective.lamda if hasattr(objective, 'lamda') else 0, n_eval,
+                 objective.random_seed_info if hasattr(objective, 'random_seed_info') else 'none'))
 
 
 if __name__ == '__main__':
-	parser_ = argparse.ArgumentParser(
-		description='GOLD : Graph Bayesian optimization with Learned Dependencies for Combinatorial Structures')
-	parser_.add_argument('--n_eval', dest='n_eval', type=int, default=1)
-	parser_.add_argument('--path', dest='path')
-	parser_.add_argument('--objective', dest='objective')
-	parser_.add_argument('--random_seed_config', dest='random_seed_config', type=int, default=None)
-	parser_.add_argument('--no_graph_learning', dest='no_graph_learning', action='store_true', default=False)
-	parser_.add_argument('--parallel', dest='parallel', action='store_true', default=False)
+    parser_ = argparse.ArgumentParser(
+        description='GOLD : Graph Bayesian optimization with Learned Dependencies for Combinatorial Structures')
+    parser_.add_argument('--n_eval', dest='n_eval', type=int, default=1)
+    parser_.add_argument('--path', dest='path')
+    parser_.add_argument('--objective', dest='objective')
+    parser_.add_argument('--random_seed_config', dest='random_seed_config', type=int, default=None)
+    parser_.add_argument('--no_graph_learning', dest='no_graph_learning', action='store_true', default=False)
+    parser_.add_argument('--parallel', dest='parallel', action='store_true', default=False)
 
-	args_ = parser_.parse_args()
-	print(args_)
-	kwag_ = vars(args_)
-	path_ = kwag_['path']
-	objective_ = kwag_['objective']
-	random_seed_config_ = kwag_['random_seed_config']
-	parallel_ = kwag_['parallel']
-	kwag_['learn_graph'] = not kwag_['no_graph_learning']
-	del kwag_['no_graph_learning']
-	print(kwag_)
+    args_ = parser_.parse_args()
+    print(args_)
+    kwag_ = vars(args_)
+    path_ = kwag_['path']
+    objective_ = kwag_['objective']
+    random_seed_config_ = kwag_['random_seed_config']
+    parallel_ = kwag_['parallel']
+    kwag_['learn_graph'] = not kwag_['no_graph_learning']
+    del kwag_['no_graph_learning']
+    print(kwag_)
+    assert 1 <= int(random_seed_config_) <= 25
+    assert (path_ is None) != (objective_ is None)
+    random_seed_config_ -= 1
 
-	assert (path_ is None) != (objective_ is None)
-	if objective_ == 'ising':
-		assert 1 <= int(random_seed_config_) <= 25
-		random_seed_pair = generate_random_seed_pair_ising()
-		random_seed_config = random_seed_config_ - 1
-		case_seed = sorted(random_seed_pair.keys())[int(random_seed_config / 5)]
-		init_seed = sorted(random_seed_pair[case_seed])[int(random_seed_config % 5)]
-		kwag_['objective'] = Ising(random_seed_pair=(case_seed, init_seed))
-	elif objective_ == 'contamination':
-		assert 1 <= int(random_seed_config_) <= 25
-		random_seed_pair = generate_random_seed_pair_contamination()
-		random_seed_config = random_seed_config_ - 1
-		case_seed = sorted(random_seed_pair.keys())[int(random_seed_config / 5)]
-		init_seed = sorted(random_seed_pair[case_seed])[int(random_seed_config % 5)]
-		kwag_['objective'] = Contamination(random_seed_pair=(case_seed, init_seed))
-	elif objective_ == 'pestcontrol':
-		assert 1 <= int(random_seed_config_) <= 25
-		random_seed = sorted(generate_random_seed_pestcontrol())[random_seed_config_ - 1]
-		kwag_['objective'] = PestControl(random_seed=random_seed)
-	elif objective_ == 'centroid':
-		assert 1 <= int(random_seed_config_) <= 25
-		random_seed_pair = generate_random_seed_pair_centroid()
-		random_seed_config = random_seed_config_ - 1
-		case_seed = sorted(random_seed_pair.keys())[int(random_seed_config / 5)]
-		init_seed = sorted(random_seed_pair[case_seed])[int(random_seed_config % 5)]
-		print(case_seed, init_seed)
-		kwag_['objective'] = Centroid(random_seed_pair=(case_seed, init_seed))
-	else:
-		raise NotImplementedError
-	GOLD(**kwag_)
+    if objective_ == 'ising':
+        random_seed_pair_ = generate_random_seed_pair_ising()
+        case_seed_ = sorted(random_seed_pair_.keys())[int(random_seed_config_ / 5)]
+        init_seed_ = sorted(random_seed_pair_[case_seed_])[int(random_seed_config_ % 5)]
+        kwag_['objective'] = Ising(random_seed_pair=(case_seed_, init_seed_))
+    elif objective_ == 'contamination':
+        random_seed_pair_ = generate_random_seed_pair_contamination()
+        case_seed_ = sorted(random_seed_pair_.keys())[int(random_seed_config_ / 5)]
+        init_seed_ = sorted(random_seed_pair_[case_seed_])[int(random_seed_config_ % 5)]
+        kwag_['objective'] = Contamination(random_seed_pair=(case_seed_, init_seed_))
+    elif objective_ == 'centroid':
+        random_seed_pair_ = generate_random_seed_pair_centroid()
+        case_seed_ = sorted(random_seed_pair_.keys())[int(random_seed_config_ / 5)]
+        init_seed_ = sorted(random_seed_pair_[case_seed])[int(random_seed_config_ % 5)]
+        kwag_['objective'] = Centroid(random_seed_pair=(case_seed_, init_seed_))
+    elif objective_ == 'pestcontrol':
+        random_seed_ = sorted(generate_random_seed_pestcontrol())[random_seed_config_]
+        kwag_['objective'] = PestControl(random_seed=random_seed_)
+    elif objective_ == 'maxsat28':
+        random_seed_ = sorted(generate_random_seed_maxsat())[random_seed_config_]
+        kwag_['objective'] = MaxSAT28(random_seed=random_seed_)
+    elif objective_ == 'maxsat43':
+        random_seed_ = sorted(generate_random_seed_maxsat())[random_seed_config_]
+        kwag_['objective'] = MaxSAT43(random_seed=random_seed_)
+    elif objective_ == 'maxsat60':
+        random_seed_ = sorted(generate_random_seed_maxsat())[random_seed_config_]
+        kwag_['objective'] = MaxSAT60(random_seed=random_seed_)
+    else:
+        raise NotImplementedError
+    GOLD(**kwag_)

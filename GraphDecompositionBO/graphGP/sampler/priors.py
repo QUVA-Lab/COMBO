@@ -23,14 +23,15 @@ def log_prior_constmean(constmean, output_min, output_max):
 	:return:
 	"""
 	output_mid = (output_min + output_max) / 2.0
-	stable_dev = (output_max - output_min) * STABLE_MEAN_RNG / 2.0
+	output_rad = (output_max - output_min) * STABLE_MEAN_RNG / 2.0
 	# Unstable parameter in sampling
-	if constmean < output_mid - stable_dev or output_mid + stable_dev < constmean:
+	if constmean < output_mid - output_rad or output_mid + output_rad < constmean:
 		return -float('inf')
 	# Uniform prior
 	# return 0
 	# Truncated Gaussian
-	return -np.log(stable_dev / 2.0) - 0.5 * (constmean - output_mid) ** 2 / (stable_dev / 2.0) ** 2
+	stable_dev = output_rad / 2.0
+	return -np.log(stable_dev) - 0.5 * (constmean - output_mid) ** 2 / (stable_dev) ** 2
 
 
 def log_prior_noisevar(log_noise_var):

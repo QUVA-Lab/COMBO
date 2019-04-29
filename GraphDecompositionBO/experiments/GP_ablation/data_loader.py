@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from GraphDecompositionBO.experiments.synthetic_binary import highorder_interaction_function, generate_function_on_highorderbinary
-from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSAT
+from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSAT28, MaxSAT43, MaxSAT60
 
 
 MAXSAT_DIR_NAME = os.path.join(os.path.split(__file__)[0], '..', 'MaxSAT', 'maxsat2018_data')
@@ -49,7 +49,7 @@ def load_maxsat(data_type, train_data_scale, random_seed=None):
 	data_seed = np.random.RandomState(random_seed).randint(0, 10000)
 	n_data = 1000
 	n_train = train_data_scale * 50
-	maxsat = MaxSAT(os.path.join(MAXSAT_DIR_NAME, data_filename))
+	maxsat = MaxSAT43(data_seed)
 	input_data = torch.from_numpy(np.random.RandomState(data_seed).randint(0, 2, [n_data, maxsat.nbvar]))
 	output_data = []
 	for i in range(n_data):

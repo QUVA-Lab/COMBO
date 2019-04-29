@@ -1,10 +1,9 @@
-
-
 import numpy as np
 
 
 SEED_STR_LIST = ['2019ICML_ISING', '2019ICML_CONTAMINATION', '2019ICML_AEROSTRUCTURAL', '2019ICML_TRAVELPLAN',
-                 '2019ICML_PESTCONTROL', '2019ICML_CENTROID', '2019ICML_HIGHORDERBINARY', '2019NeurIPS_MAXSAT']
+                 '2019ICML_PESTCONTROL', '2019ICML_CENTROID', '2019ICML_HIGHORDERBINARY', '2019NeurIPS_MAXSAT',
+                 '2019NeurIPS_NASBINARY']
 
 
 def generate_random_seed_pair_ising():
@@ -32,7 +31,11 @@ def generate_random_seed_pair_centroid():
 
 
 def generate_random_seed_maxsat():
-    return _generate_random_seed_pair('2019NeurIPS_MAXSAT', n_init_point_seed=25)
+    return _generate_random_seed('2019NeurIPS_MAXSAT', n_init_point_seed=25)
+
+
+def generate_random_seed_nasbinary():
+    return _generate_random_seed('2019NeurIPS_NASBINARY', n_init_point_seed=10)
 
 
 def _generate_random_seed(seed_str, n_init_point_seed=10):
@@ -50,16 +53,5 @@ def _generate_random_seed_pair(seed_str, n_test_case_seed=5, n_init_point_seed=5
     return result
 
 
-def _generate_random_seed(seed_str, n_init_point_seed=10):
-    assert seed_str in SEED_STR_LIST
-    rng_state = np.random.RandomState(seed=sum([ord(ch) for ch in seed_str]))
-    return rng_state.randint(0, 10000, (n_init_point_seed, ))
-
-
-def _generate_random_seed_pair(seed_str, n_test_case_seed=5, n_init_point_seed=5):
-    assert seed_str in SEED_STR_LIST
-    rng_state = np.random.RandomState(seed=sum([ord(ch) for ch in seed_str]))
-    result = {}
-    for _ in range(n_test_case_seed):
-        result[rng_state.randint(0, 10000)] = list(rng_state.randint(0, 10000, (n_init_point_seed, )))
-    return result
+if __name__ == '__main__':
+    print(generate_random_seed_nasbinary())
