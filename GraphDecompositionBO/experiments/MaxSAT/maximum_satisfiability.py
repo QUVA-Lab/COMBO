@@ -1,6 +1,8 @@
 import os
 import numpy as np
 
+import torch
+
 from GraphDecompositionBO.experiments.exp_utils import sample_init_points
 
 MAXSAT_DIR_NAME = os.path.join(os.path.split(__file__)[0], 'maxsat2018_data')
@@ -24,6 +26,17 @@ class _MaxSAT(object):
 		self.clauses = [([abs(int(elm)) - 1 for elm in clause], [int(elm) > 0 for elm in clause]) for _, clause in clauses]
 
 		self.suggested_init = sample_init_points(self.n_vertices, 20, random_seed)
+		self.adjacency_mat = []
+		self.fourier_freq = []
+		self.fourier_basis = []
+		self.random_seed_info = 'R%04d' % random_seed
+		for i in range(self.n_variables):
+			adjmat = torch.diag(torch.ones(1), -1) + torch.diag(torch.ones(1), 1)
+			self.adjacency_mat.append(adjmat)
+			laplacian = torch.diag(torch.sum(adjmat, dim=0)) - adjmat
+			eigval, eigvec = torch.symeig(laplacian, eigenvectors=True)
+			self.fourier_freq.append(eigval)
+			self.fourier_basis.append(eigvec)
 
 	def evaluate(self, x):
 		assert x.numel() == self.n_variables

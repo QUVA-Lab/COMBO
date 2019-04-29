@@ -86,6 +86,7 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
         surrogate_model, cfg_data, logfile_dir = load_model_data(path, exp_dir=experiment_directory())
 
     for _ in range(n_eval):
+        start_time = time.time()
         reference = torch.min(eval_outputs, dim=0)[0].item()
         print('Sampling')
         sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
@@ -103,12 +104,14 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
                                      n_vertices, acquisition_func, reference, parallel)
         next_eval, pred_mean, pred_std, pred_var = suggestion
 
+        processing_time = time.time() - start_time
+
         eval_inputs = torch.cat([eval_inputs, next_eval.view(1, -1)], 0)
         eval_outputs = torch.cat([eval_outputs, objective.evaluate(eval_inputs[-1]).view(1, 1)])
         assert not torch.isnan(eval_outputs).any()
 
         time_list.append(time.time())
-        elapse_list.append(time_list[-1] - time_list[-2])
+        elapse_list.append(processing_time)
         pred_mean_list.append(pred_mean.item())
         pred_std_list.append(pred_std.item())
         pred_var_list.append(pred_var.item())
@@ -157,7 +160,7 @@ if __name__ == '__main__':
     elif objective_ == 'centroid':
         random_seed_pair_ = generate_random_seed_pair_centroid()
         case_seed_ = sorted(random_seed_pair_.keys())[int(random_seed_config_ / 5)]
-        init_seed_ = sorted(random_seed_pair_[case_seed])[int(random_seed_config_ % 5)]
+        init_seed_ = sorted(random_seed_pair_[case_seed_])[int(random_seed_config_ % 5)]
         kwag_['objective'] = Centroid(random_seed_pair=(case_seed_, init_seed_))
     elif objective_ == 'pestcontrol':
         random_seed_ = sorted(generate_random_seed_pestcontrol())[random_seed_config_]
