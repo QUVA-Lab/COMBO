@@ -42,7 +42,8 @@ class GraphSimulatedAnnealing(Annealer):
 
     def energy(self):
         # anneal() minimize
-        evaluation = -acquisition_expectation(self.state, self.inference_samples, self.acquisition_func, self.reference).item()
+        evaluation = -acquisition_expectation(self.state, self.inference_samples, self.partition_samples,
+                                              self.n_vertices, self.acquisition_func, self.reference).item()
         self.state_history.append(self.state.clone())
         self.eval_history.append(evaluation)
         return evaluation

@@ -1,6 +1,9 @@
 import socket
 
 
+PROGRESS_BAR_LEN = 50
+
+
 def experiment_directory():
 	hostname = socket.gethostname()
 	if hostname == 'DTA160000':

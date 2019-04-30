@@ -28,7 +28,8 @@ def optim_inits(x_opt, inference_samples, partition_samples, edge_mat_samples, n
     shuffled_ind = list(range(min_nbd.size(0)))
     np.random.shuffle(shuffled_ind)
     x_init_candidates = torch.cat(tuple([min_nbd[shuffled_ind[:N_SPRAY]], rnd_nbd]), dim=0)
-    acquisition_values = acquisition_expectation(x_init_candidates, inference_samples, acquisition_func, reference)
+    acquisition_values = acquisition_expectation(x_init_candidates, inference_samples, partition_samples, n_vertices,
+                                                 acquisition_func, reference)
 
     nonnan_ind = ~torch.isnan(acquisition_values).squeeze(1)
     x_init_candidates = x_init_candidates[nonnan_ind]

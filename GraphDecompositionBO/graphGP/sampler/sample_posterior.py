@@ -7,8 +7,7 @@ from GraphDecompositionBO.graphGP.sampler.sample_hyper import slice_hyper
 from GraphDecompositionBO.graphGP.sampler.sample_edgeweight import slice_edgeweight
 from GraphDecompositionBO.graphGP.sampler.sample_partition import gibbs_partition
 from GraphDecompositionBO.graphGP.sampler.tool_partition import ind_to_perturb, strong_product
-
-PROGRESS_BAR_LEN = 50
+from GraphDecompositionBO.config import PROGRESS_BAR_LEN
 
 
 def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
@@ -45,6 +44,7 @@ def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
 	n_sample_total = n_sample * n_thin + n_burn
 	n_digit = int(np.ceil(np.log(n_sample_total) / np.log(10)))
 	for s in range(0, n_sample_total):
+		slice_hyper(model, input_data, output_data, n_vertices, sorted_partition=partition_sample)
 		# In 'Batched High-dimensional Bayesian Optimization via Structural Kernel Learning',
 		# similar additive structure is updated for every 50 iterations(evaluations)
 		# This may be due to too much variability if decomposition is learned every iterations.
@@ -58,7 +58,6 @@ def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
 			                              fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list,
 			                              edge_mat_list=edge_mat_list, ind=partition_ind)
 			partition_sample, fourier_freq_list, fourier_basis_list, edge_mat_list = gibbs_tuple
-			slice_hyper(model, input_data, output_data, n_vertices, sorted_partition=partition_sample)
 
 		shuffled_beta_ind = list(range(len(adj_mat_list)))
 		np.random.shuffle(shuffled_beta_ind)
@@ -78,7 +77,7 @@ def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
 			edge_mat_samples.append([elm.clone() for elm in edge_mat_list])
 		progress_mark_len = int((s + 1.0) / n_sample_total * PROGRESS_BAR_LEN)
 		fmt_str = '(%s)   %3d%% (%' + str(n_digit) + 'd of %d) |' \
-		          + '#' * progress_mark_len + ' ' * (PROGRESS_BAR_LEN - progress_mark_len) + '|'
+		          + '#' * progress_mark_len + '-' * (PROGRESS_BAR_LEN - progress_mark_len) + '|'
 		progress_str = fmt_str % (time.strftime('%H:%M:%S', time.gmtime()),
 		                          int((s + 1.0) / n_sample_total * 100), s + 1, n_sample_total)
 		sys.stdout.write('\b' * len(progress_str) + progress_str)

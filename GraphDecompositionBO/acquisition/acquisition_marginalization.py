@@ -8,11 +8,14 @@ from GraphDecompositionBO.graphGP.sampler.tool_partition import group_input
 from GraphDecompositionBO.acquisition.acquisition_functions import expected_improvement
 
 
-def acquisition_expectation(x, inference_samples, acquisition_func=expected_improvement, reference=None):
+def acquisition_expectation(x, inference_samples, partition_samples, n_vertices, acquisition_func=expected_improvement,
+                            reference=None):
     """
     Using posterior samples, the acquisition function is also averaged over posterior samples
     :param x: 1d or 2d tensor
     :param inference_samples: inference method for each posterior sample
+    :param partition_samples:
+    :param n_vertices:
     :param acquisition_func:
     :param reference:
     :return:
@@ -23,7 +26,8 @@ def acquisition_expectation(x, inference_samples, acquisition_func=expected_impr
     acquisition_sample_list = []
     for s in range(len(inference_samples)):
         hyper = inference_samples[s].model.param_to_vec()
-        pred_dist = inference_samples[s].predict(x, hyper=hyper, verbose=False)
+        grouped_x = group_input(x, sorted_partition=partition_samples[s], n_vertices=n_vertices)
+        pred_dist = inference_samples[s].predict(grouped_x, hyper=hyper, verbose=False)
         pred_mean_sample = pred_dist[0].detach()
         pred_var_sample = pred_dist[1].detach()
         acquisition_sample_list.append(acquisition_func(pred_mean_sample[:, 0], pred_var_sample[:, 0], reference=reference))
