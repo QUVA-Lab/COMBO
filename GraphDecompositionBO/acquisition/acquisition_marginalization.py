@@ -54,7 +54,7 @@ def inference_sampling(input_data, output_data, n_vertices, hyper_samples, parti
     return inference_samples
 
 
-def suggestion_statistic(x, inference_samples, partition_samples, n_vertices):
+def prediction_statistic(x, inference_samples, partition_samples, n_vertices):
     if x.dim() == 1:
         x = x.unsqueeze(0)
     mean_sample_list = []

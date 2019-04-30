@@ -44,8 +44,8 @@ def load_cifar10(batch_size, shuffle, random_seed=None):
 	return train_loader, valid_loader, test_loader
 
 
-def train(model, n_epochs, train_loader, eval_loader, cuda=False, device=0):
-	cuda = torch.cuda.is_available() and cuda
+def train(model, n_epochs, train_loader, eval_loader, device=None):
+	cuda = torch.cuda.is_available() and device is not None
 
 	if cuda:
 		model.cuda(device=device)
@@ -104,20 +104,44 @@ def train(model, n_epochs, train_loader, eval_loader, cuda=False, device=0):
 
 
 class NASBinaryCIFAR10(object):
-	def __init__(self, random_seed):
+	def __init__(self, random_seed, device=None):
 		self.n_nodes = 7
 		self.n_variables = int(self.n_nodes * (self.n_nodes - 1) / 2 + (self.n_nodes - 2) * 2)
 		self.n_ch_base = 64
 		self.n_epochs = 20
+		self.device = device
+		if torch.cuda.is_available():
+			if len(GPUtil.getGPUs()) == 1:
+				self.device = 0
+			else:
+				assert 0 <= self.device < len(GPUtil.getGPUs())
+		else:
+			self.device = None
 		self.train_loader, self.valid_loader, _ = load_cifar10(batch_size=64, shuffle=True, random_seed=0)
 
 		self.n_vertices = np.array([2] * self.n_variables)
-		self.suggested_init = sample_init_points(self.n_vertices, 20, random_seed)
+		self.suggested_init = sample_init_points(self.n_vertices, 10, random_seed)
+
+		self.adjacency_mat = []
+		self.fourier_coef = []
+		self.fourier_basis = []
+		self.random_seed_info = 'R%04d' % random_seed
+		for i in range(self.n_variables):
+			adjmat = torch.diag(torch.ones(1), -1) + torch.diag(torch.ones(1), 1)
+			self.adjacency_mat.append(adjmat)
+			laplacian = torch.diag(torch.sum(adjmat, dim=0)) - adjmat
+			eigval, eigvec = torch.symeig(laplacian, eigenvectors=True)
+			self.fourier_coef.append(eigval)
+			self.fourier_basis.append(eigvec)
 
 	def evaluate(self, x):
+		if x.dim() == 1:
+			x = x.unsqueeze(0)
+		return torch.cat([self._evaluate_single(x[i]) for i in range(x.size(0))], dim=0)
+
+	def _evaluate_single(self, x):
 		assert x.numel() == self.n_variables
-		if x.dim() == 2:
-			x = x.squeeze(0)
+		assert x.dim() == 1
 		x_np = (x.cpu() if x.is_cuda else x).numpy().astype(np.int)
 		node_type = x_np[:2 * (self.n_nodes - 2)]
 		connectivity = x_np[2 * (self.n_nodes - 2):]
@@ -132,12 +156,7 @@ class NASBinaryCIFAR10(object):
 			return -0.1 * x.float().new_ones(1, 1)
 		model = NASBinaryCNN(node_type, adj_mat, n_ch_base=self.n_ch_base)
 		n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-		gpus = GPUtil.getAvailable(order='load')
-		while len(gpus) == 0:
-			sys.stdout.write('\b' * 38 + 'Waiting for an available GPU  ' + time.strftime('%H:%M:%S', time.gmtime()))
-			time.sleep(5)
-			gpus = GPUtil.getAvailable(order='load')
-		neg_eval_acc = -train(model, self.n_epochs, self.train_loader, self.valid_loader, cuda=True, device=gpus[0])
+		neg_eval_acc = -train(model, self.n_epochs, self.train_loader, self.valid_loader, device=self.device)
 		eval = neg_eval_acc + n_params / 500000000.0
 		print(neg_eval_acc, n_params / 500000000.0)
 		return eval * x.float().new_ones(1, 1)

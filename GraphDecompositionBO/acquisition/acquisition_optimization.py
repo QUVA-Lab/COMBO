@@ -11,7 +11,7 @@ from GraphDecompositionBO.acquisition.acquisition_optimizers.starting_points imp
 from GraphDecompositionBO.acquisition.acquisition_optimizers.greedy_ascent import greedy_ascent
 from GraphDecompositionBO.acquisition.acquisition_optimizers.simulated_annealing import simulated_annealing
 from GraphDecompositionBO.acquisition.acquisition_functions import expected_improvement
-from GraphDecompositionBO.acquisition.acquisition_marginalization import suggestion_statistic
+from GraphDecompositionBO.acquisition.acquisition_marginalization import prediction_statistic
 
 MAX_N_ASCENT = float('inf')
 N_CPU = os.cpu_count()
@@ -40,21 +40,22 @@ def next_evaluation(x_opt, input_data, inference_samples, partition_samples, edg
     id_unit = torch.from_numpy(np.cumprod(np.concatenate([np.ones(1), n_vertices[:-1]])).astype(np.int))
 
     start_time = time.time()
-    print('Acquisition function optimization initial points selection %s has begun'
+    print('(%s) Acquisition function optimization initial points selection began'
           % (time.strftime('%H:%M:%S', time.gmtime(start_time))))
 
-    x_inits, acq_inits = optim_inits(x_opt, inference_samples, partition_samples, edge_mat_samples, n_vertices, acquisition_func, reference)
+    x_inits, acq_inits = optim_inits(x_opt, inference_samples, partition_samples, edge_mat_samples, n_vertices,
+                                     acquisition_func, reference)
     n_inits = x_inits.size(0)
     assert n_inits % 2 == 0
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print('Acquisition function optimization initial points selection ended %s(%s)'
+    print('(%s) Acquisition function optimization initial points selection ended - %s'
           % (time.strftime('%H:%M:%S', time.gmtime(end_time)), time.strftime('%H:%M:%S', time.gmtime(elapsed_time))))
 
     start_time = time.time()
-    print('Acquisition function optimization with %2d inits %s has begun'
-          % (x_inits.size(0), time.strftime('%H:%M:%S', time.gmtime(start_time))))
+    print('(%s) Acquisition function optimization with %2d inits'
+          % (time.strftime('%H:%M:%S', time.gmtime(start_time)), x_inits.size(0)))
 
     if parallel:
         ga_args_list = [(x_inits[i], inference_samples, partition_samples, edge_mat_samples,
@@ -66,11 +67,6 @@ def next_evaluation(x_opt, input_data, inference_samples, partition_samples, edg
         ga_opt_vrt = [elm[0] for elm in ga_result]
         ga_opt_acq = [elm[1] for elm in ga_result]
         inits_ind = range(n_inits)
-        for i in range(n_inits-1, -1, -1):
-            if np.isnan(ga_opt_acq[i]) or (input_data == ga_opt_vrt[i]).all(dim=1).any():
-                ga_opt_vrt.pop(i)
-                ga_opt_acq.pop(i)
-                inits_ind.pop(i)
         sys.stdout.write('and took %s\n' % time.strftime('%H:%M:%S', time.gmtime(time.time() - ga_start_time)))
 
         x_inits = x_inits[inits_ind]
@@ -86,7 +82,7 @@ def next_evaluation(x_opt, input_data, inference_samples, partition_samples, edg
         sa_opt_vrt = [elm[0] for elm in sa_result]
         sa_opt_acq = [elm[1] for elm in sa_result]
         for i in range(n_inits_sa-1, -1, -1):
-            if np.isnan(sa_opt_acq[i]) or (input_data == sa_opt_vrt[i]).all(dim=1).any() or ga_opt_acq[i] > sa_opt_acq[i]:
+            if np.isnan(ga_opt_acq[i]) or ga_opt_acq[i] > sa_opt_acq[i]:
                 sa_opt_vrt[i] = ga_opt_vrt[i]
                 sa_opt_acq[i] = ga_opt_acq[i]
         sys.stdout.write('and took %s\n' % time.strftime('%H:%M:%S', time.gmtime(time.time() - sa_start_time)))
@@ -124,16 +120,27 @@ def next_evaluation(x_opt, input_data, inference_samples, partition_samples, edg
     acq_max_inds = np.where(np.max(sa_opt_acq) == np.array(sa_opt_acq))[0]
     acq_max_ind = acq_max_inds[np.random.randint(0, acq_max_inds.size)]
     suggestion = sa_opt_vrt[acq_max_ind]
-    mean, std, var = suggestion_statistic(suggestion, inference_samples, partition_samples, n_vertices)
+
+    init_stat = [prediction_statistic(x_inits[i], inference_samples, partition_samples, n_vertices) for i in range(n_inits)]
+    init_mean = [init_stat[i][0] for i in range(n_inits)]
+    init_var = [init_stat[i][2] for i in range(n_inits)]
+
+    ga_opt_stat = [prediction_statistic(elm, inference_samples, partition_samples, n_vertices) for elm in ga_opt_vrt]
+    ga_opt_mean = [ga_opt_stat[i][0] for i in range(len(ga_opt_vrt))]
+    ga_opt_var = [ga_opt_stat[i][2] for i in range(len(ga_opt_vrt))]
+
+    sa_opt_stat = [prediction_statistic(elm, inference_samples, partition_samples, n_vertices) for elm in sa_opt_vrt]
+    sa_opt_mean = [sa_opt_stat[i][0] for i in range(len(sa_opt_vrt))]
+    sa_opt_var = [sa_opt_stat[i][2] for i in range(len(sa_opt_vrt))]
 
     acq_str_list = []
-    fmt_str = '\t At an initial point %7.4f (id:%' + str(id_digit) + 'd)' \
-              + ' + Greedy Ascent %7.4f (id:%' + str(id_digit) + 'd)' \
-              + ' + Simulated Annealing %7.4f (id:%' + str(id_digit) + 'd) '
+    fmt_str = '\t Init %7.4f [%+5.3E/%5.3E(%5.3E)] (id:%' + str(id_digit) + 'd)' \
+              + ' + Gre. Asc. %7.4f [%+5.3E/%5.3E(%5.3E)] (id:%' + str(id_digit) + 'd)' \
+              + ' + Sim. Ann. %7.4f [%+5.3E/%5.3E(%5.3E)] (id:%' + str(id_digit) + 'd) '
     for i in range(n_inits_sa):
-        acq_str_i = fmt_str % (acq_inits[i], torch.sum(x_inits[i] * id_unit),
-                               ga_opt_acq[i], torch.sum(ga_opt_vrt[i] * id_unit),
-                               sa_opt_acq[i], torch.sum(sa_opt_vrt[i] * id_unit))
+        acq_str_i = fmt_str % (acq_inits[i], init_mean[i], init_var[i], init_var[i] ** 0.5, torch.sum(x_inits[i] * id_unit),
+                               ga_opt_acq[i], ga_opt_mean[i], ga_opt_var[i], ga_opt_var[i] ** 0.5, torch.sum(ga_opt_vrt[i] * id_unit),
+                               sa_opt_acq[i], sa_opt_mean[i], sa_opt_var[i], sa_opt_var[i] ** 0.5, torch.sum(sa_opt_vrt[i] * id_unit))
         acq_str_i += ' [' + ('Remain' if torch.all(x_inits[i] == ga_opt_vrt[i]) else 'Update') + ','
         acq_str_i += ('Remain' if torch.all(ga_opt_vrt[i] == sa_opt_vrt[i]) else 'Update') + ']'
         if i == acq_max_ind:
@@ -143,7 +150,8 @@ def next_evaluation(x_opt, input_data, inference_samples, partition_samples, edg
     print('\n'.join(acq_str_list))
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print('Acquisition function optimization ended %s(%s)'
+    print('(%s) Acquisition function optimization ended %s'
           % (time.strftime('%H:%M:%S', time.gmtime(end_time)), time.strftime('%H:%M:%S', time.gmtime(elapsed_time))))
 
+    mean, std, var = prediction_statistic(suggestion, inference_samples, partition_samples, n_vertices)
     return suggestion, mean, std, var

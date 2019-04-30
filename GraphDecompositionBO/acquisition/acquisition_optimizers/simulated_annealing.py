@@ -1,6 +1,11 @@
+import math
+import random
+import time
+
 import numpy as np
 
 from simanneal import Annealer
+from simanneal.anneal import round_figures
 
 from GraphDecompositionBO.acquisition.acquisition_functions import expected_improvement
 from GraphDecompositionBO.acquisition.acquisition_marginalization import acquisition_expectation
@@ -46,6 +51,80 @@ class GraphSimulatedAnnealing(Annealer):
     def update(self, *args, **kwargs):
         pass
 
+    # To overwrite the original auto
+    def auto(self, minutes, steps=2000):
+        """Explores the annealing landscape and
+        estimates optimal temperature settings.
+
+        Returns a dictionary suitable for the `set_schedule` method.
+        """
+
+        def run(T, steps):
+            """Anneals a system at constant temperature and returns the state,
+            energy, rate of acceptance, and rate of improvement."""
+            E = self.energy()
+            prevState = self.copy_state(self.state)
+            prevEnergy = E
+            accepts, improves = 0, 0
+            for _ in range(steps):
+                self.move()
+                E = self.energy()
+                dE = E - prevEnergy
+                if dE > 0.0 and math.exp(-dE / T) < random.random():
+                    self.state = self.copy_state(prevState)
+                    E = prevEnergy
+                else:
+                    accepts += 1
+                    if dE < 0.0:
+                        improves += 1
+                    prevState = self.copy_state(self.state)
+                    prevEnergy = E
+            return E, float(accepts) / steps, float(improves) / steps
+
+        step = 0
+        self.start = time.time()
+
+        # Attempting automatic simulated anneal...
+        # Find an initial guess for temperature
+        T = 0.0
+        E = self.energy()
+        self.update(step, T, E, None, None)
+        while T == 0.0:
+            step += 1
+            self.move()
+            T = abs(self.energy() - E)
+
+        # Search for Tmax - a temperature that gives 98% acceptance
+        E, acceptance, improvement = run(T, steps)
+
+        step += steps
+        while acceptance > 0.98:
+            T = round_figures(T / 1.5, 2)
+            E, acceptance, improvement = run(T, steps)
+            step += steps
+            self.update(step, T, E, acceptance, improvement)
+        while acceptance < 0.98:
+            T = round_figures(T * 1.5, 2)
+            E, acceptance, improvement = run(T, steps)
+            step += steps
+            self.update(step, T, E, acceptance, improvement)
+        Tmax = T
+
+        # Search for Tmin - a temperature that gives 0% improvement
+        while improvement > 0.0:
+            T = round_figures(T / 1.5, 2)
+            E, acceptance, improvement = run(T, steps)
+            step += steps
+            self.update(step, T, E, acceptance, improvement)
+        Tmin = T
+
+        # Calculate anneal duration
+        elapsed = time.time() - self.start
+        duration = round_figures(int(60.0 * minutes * step / elapsed), 2)
+
+        # Don't perform anneal, just return params
+        return {'tmax': Tmax, 'tmin': Tmin, 'steps': duration, 'updates': self.updates}
+
 
 def simulated_annealing(x_init, inference_samples, partition_samples, edge_mat_samples, n_vertices,
                         acquisition_func, reference=None):
@@ -62,10 +141,8 @@ def simulated_annealing(x_init, inference_samples, partition_samples, edge_mat_s
     """
     sa_runner = GraphSimulatedAnnealing(x_init, inference_samples, partition_samples, edge_mat_samples, n_vertices,
                                         acquisition_func, reference)
-    sa_param = sa_runner.auto(minutes=15.0/60.0, steps=10)
-    sa_runner.steps = sa_param['steps']
-    sa_runner.Tmax = sa_param['tmax']
-    sa_runner.Tmin = sa_param['tmin']
+    sa_schedule = sa_runner.auto(minutes=15.0/60.0, steps=10)
+    sa_runner.set_schedule(sa_schedule)
     opt_state, opt_eval = sa_runner.anneal()
 
     # Annealer.anneal() MINinimzes an objective but acqusition functions should be MAXimized.

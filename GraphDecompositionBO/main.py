@@ -16,10 +16,11 @@ from GraphDecompositionBO.utils import model_data_filenames, load_model_data, di
 
 from GraphDecompositionBO.experiments.random_seed_config import generate_random_seed_pair_ising, \
     generate_random_seed_pair_contamination, generate_random_seed_pestcontrol, generate_random_seed_pair_centroid, \
-    generate_random_seed_maxsat
+    generate_random_seed_maxsat, generate_random_seed_nasbinary
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import Ising, Contamination
 from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PestControl, Centroid
 from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSAT28, MaxSAT43, MaxSAT60
+from GraphDecompositionBO.experiments.NAS_binary.nas_binary_cifar10 import NASBinaryCIFAR10
 
 
 def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True, **kwargs):
@@ -75,9 +76,9 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
         pred_var_list = [0] * n_init
 
         surrogate_model.init_param(eval_outputs)
-        print('Burn-in')
+        print('(%s) Burn-in' % time.strftime('%H:%M:%S', time.gmtime()))
         sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
-                                              log_beta, sorted_partition, n_sample=1, n_burn=99, n_thin=1,
+                                              log_beta, sorted_partition, n_sample=1, n_burn=9, n_thin=1,
                                               learn_graph=learn_graph)
         log_beta = sample_posterior[1][0]
         sorted_partition = sample_posterior[2][0]
@@ -88,7 +89,7 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
     for _ in range(n_eval):
         start_time = time.time()
         reference = torch.min(eval_outputs, dim=0)[0].item()
-        print('Sampling')
+        print('(%s) Sampling' % time.strftime('%H:%M:%S', time.gmtime()))
         sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
                                               log_beta, sorted_partition, n_sample=10, n_burn=0, n_thin=1,
                                               learn_graph=learn_graph)
@@ -132,6 +133,7 @@ if __name__ == '__main__':
     parser_.add_argument('--random_seed_config', dest='random_seed_config', type=int, default=None)
     parser_.add_argument('--no_graph_learning', dest='no_graph_learning', action='store_true', default=False)
     parser_.add_argument('--parallel', dest='parallel', action='store_true', default=False)
+    parser_.add_argument('--device', dest='device', type=int, default=None)
 
     args_ = parser_.parse_args()
     print(args_)
@@ -142,6 +144,8 @@ if __name__ == '__main__':
     parallel_ = kwag_['parallel']
     kwag_['learn_graph'] = not kwag_['no_graph_learning']
     del kwag_['no_graph_learning']
+    if args_.device is None:
+        del kwag_['device']
     print(kwag_)
     assert 1 <= int(random_seed_config_) <= 25
     assert (path_ is None) != (objective_ is None)
@@ -174,6 +178,9 @@ if __name__ == '__main__':
     elif objective_ == 'maxsat60':
         random_seed_ = sorted(generate_random_seed_maxsat())[random_seed_config_]
         kwag_['objective'] = MaxSAT60(random_seed=random_seed_)
+    elif objective_ == 'nasbinary':
+        random_seed_ = sorted(generate_random_seed_nasbinary())[random_seed_config_]
+        kwag_['objective'] = NASBinaryCIFAR10(random_seed=random_seed_, device=args_.device)
     else:
         raise NotImplementedError
     GOLD(**kwag_)

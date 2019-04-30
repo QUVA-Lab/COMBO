@@ -1,12 +1,14 @@
 import sys
+import time
 import copy
-import progressbar
 import numpy as np
 
 from GraphDecompositionBO.graphGP.sampler.sample_hyper import slice_hyper
 from GraphDecompositionBO.graphGP.sampler.sample_edgeweight import slice_edgeweight
 from GraphDecompositionBO.graphGP.sampler.sample_partition import gibbs_partition
 from GraphDecompositionBO.graphGP.sampler.tool_partition import ind_to_perturb, strong_product
+
+PROGRESS_BAR_LEN = 50
 
 
 def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
@@ -40,8 +42,9 @@ def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
 	edge_mat_list = [strong_product(adj_mat_list, input_data.new_ones(len(adj_mat_list)), subset) for subset in
 	                 sorted_partition]
 
-	bar = progressbar.ProgressBar(max_value=n_sample * n_thin + n_burn)
-	for s in range(0, n_sample * n_thin + n_burn):
+	n_sample_total = n_sample * n_thin + n_burn
+	n_digit = int(np.ceil(np.log(n_sample_total) / np.log(10)))
+	for s in range(0, n_sample_total):
 		# In 'Batched High-dimensional Bayesian Optimization via Structural Kernel Learning',
 		# similar additive structure is updated for every 50 iterations(evaluations)
 		# This may be due to too much variability if decomposition is learned every iterations.
@@ -73,6 +76,11 @@ def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
 			freq_samples.append([elm.clone() for elm in fourier_freq_list])
 			basis_samples.append([elm.clone() for elm in fourier_basis_list])
 			edge_mat_samples.append([elm.clone() for elm in edge_mat_list])
-		bar.update(value=s + 1)
+		progress_mark_len = int((s + 1.0) / n_sample_total * PROGRESS_BAR_LEN)
+		fmt_str = '(%s)   %3d%% (%' + str(n_digit) + 'd of %d) |' \
+		          + '#' * progress_mark_len + ' ' * (PROGRESS_BAR_LEN - progress_mark_len) + '|'
+		progress_str = fmt_str % (time.strftime('%H:%M:%S', time.gmtime()),
+		                          int((s + 1.0) / n_sample_total * 100), s + 1, n_sample_total)
+		sys.stdout.write('\b' * len(progress_str) + progress_str)
 		sys.stdout.flush()
 	return hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples
