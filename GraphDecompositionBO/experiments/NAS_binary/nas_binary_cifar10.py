@@ -104,7 +104,7 @@ def train(model, n_epochs, train_loader, eval_loader, device=None):
 
 
 class NASBinaryCIFAR10(object):
-	def __init__(self, random_seed, device=None):
+	def __init__(self, device=None):
 		self.n_nodes = 7
 		self.n_variables = int(self.n_nodes * (self.n_nodes - 1) / 2 + (self.n_nodes - 2) * 2)
 		self.n_ch_base = 64
@@ -125,7 +125,6 @@ class NASBinaryCIFAR10(object):
 		self.adjacency_mat = []
 		self.fourier_coef = []
 		self.fourier_basis = []
-		self.random_seed_info = 'R%04d' % random_seed
 		for i in range(self.n_variables):
 			adjmat = torch.diag(torch.ones(1), -1) + torch.diag(torch.ones(1), 1)
 			self.adjacency_mat.append(adjmat)

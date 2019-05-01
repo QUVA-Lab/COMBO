@@ -16,7 +16,7 @@ from GraphDecompositionBO.utils import model_data_filenames, load_model_data, di
 
 from GraphDecompositionBO.experiments.random_seed_config import generate_random_seed_pair_ising, \
     generate_random_seed_pair_contamination, generate_random_seed_pestcontrol, generate_random_seed_pair_centroid, \
-    generate_random_seed_maxsat, generate_random_seed_nasbinary
+    generate_random_seed_maxsat
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import Ising, Contamination
 from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PestControl, Centroid
 from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSAT28, MaxSAT43, MaxSAT60
@@ -179,8 +179,7 @@ if __name__ == '__main__':
         random_seed_ = sorted(generate_random_seed_maxsat())[random_seed_config_]
         kwag_['objective'] = MaxSAT60(random_seed=random_seed_)
     elif objective_ == 'nasbinary':
-        random_seed_ = sorted(generate_random_seed_nasbinary())[random_seed_config_]
-        kwag_['objective'] = NASBinaryCIFAR10(random_seed=random_seed_, device=args_.device)
+        kwag_['objective'] = NASBinaryCIFAR10(device=args_.device)
     else:
         raise NotImplementedError
     GOLD(**kwag_)

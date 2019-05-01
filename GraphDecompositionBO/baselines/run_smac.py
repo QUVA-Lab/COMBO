@@ -202,7 +202,4 @@ def evaluations_from_smac(smac):
 if __name__ == '__main__':
 	mean, std = multiple_runs('maxsat28')
 	print(np.hstack([mean.reshape(-1, 1), std.reshape(-1, 1)]))
-	mean, std = multiple_runs('maxsat43')
-	print(np.hstack([mean.reshape(-1, 1), std.reshape(-1, 1)]))
-	mean, std = multiple_runs('maxsat60')
-	print(np.hstack([mean.reshape(-1, 1), std.reshape(-1, 1)]))
+	

@@ -71,7 +71,7 @@ def simulated_annealing(x_init, inference_samples, partition_samples, edge_mat_s
     """
     sa_runner = GraphSimulatedAnnealing(x_init, inference_samples, partition_samples, edge_mat_samples, n_vertices,
                                         acquisition_func, reference)
-    steps = 2000
+    steps = 500
     sa_runner.set_schedule({'tmax': 1.0, 'tmin': 0.8 ** steps, 'steps': steps, 'updates': sa_runner.updates})
     opt_state, opt_eval = sa_runner.anneal()
 
