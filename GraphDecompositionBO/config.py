@@ -26,3 +26,15 @@ def data_directory():
 		return '/var/scratch/coh/Data'
 	else:
 		raise ValueError('Set proper experiment directory on your machine.')
+
+
+def SMAC_exp_dir():
+	hostname = socket.gethostname()
+	if hostname == 'DTA160000' or hostname[:6] == 'ivi-cn':
+		return '/home/coh1/Experiments/CombinatorialBO_SMAC'
+	elif hostname == 'quva01':
+		return '/home/changyongoh/Experiments/CombinatorialBO_SMAC'
+	elif hostname[:4] == 'node':
+		return '/var/scratch/coh/Experiments/CombinatorialBO_SMAC'
+	else:
+		raise NotImplementedError

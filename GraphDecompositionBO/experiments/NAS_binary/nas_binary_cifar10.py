@@ -15,7 +15,7 @@ from GraphDecompositionBO.config import data_directory
 from GraphDecompositionBO.experiments.NAS_binary.generate_architecture import valid_net_topo, NASBinaryCNN
 
 from GraphDecompositionBO.experiments.NAS_binary.config_cifar10 import NORM_MEAN, NORM_STD
-from GraphDecompositionBO.experiments.exp_utils import sample_init_points
+from GraphDecompositionBO.experiments.NAS_binary.architectures_in_binary import init_architectures
 
 
 N_VALID = 10000
@@ -120,7 +120,7 @@ class NASBinaryCIFAR10(object):
 		self.train_loader, self.valid_loader, _ = load_cifar10(batch_size=64, shuffle=True, random_seed=0)
 
 		self.n_vertices = np.array([2] * self.n_variables)
-		self.suggested_init = sample_init_points(self.n_vertices, 10, random_seed)
+		self.suggested_init = init_architectures()
 
 		self.adjacency_mat = []
 		self.fourier_coef = []
@@ -155,6 +155,7 @@ class NASBinaryCIFAR10(object):
 		if adj_mat is None:
 			return -0.1 * x.float().new_ones(1, 1)
 		model = NASBinaryCNN(node_type, adj_mat, n_ch_base=self.n_ch_base)
+		model.init_weights()
 		n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 		neg_eval_acc = -train(model, self.n_epochs, self.train_loader, self.valid_loader, device=self.device)
 		eval = neg_eval_acc + n_params / 500000000.0

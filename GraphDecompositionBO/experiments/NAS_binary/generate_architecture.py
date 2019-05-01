@@ -13,9 +13,9 @@ class NodeConv(nn.Module):
         self.relu = nn.ReLU()
 
     def init_weights(self):
-        nn.init.uniform_(self.bn.weight)
+        nn.init.normal_(self.bn.weight, 1.0, 0.02)
         nn.init.constant_(self.bn.bias, 0)
-        nn.init.xavier_normal_(self.conv.weight)
+        nn.init.kaiming_normal_(self.conv.weight)
         nn.init.constant_(self.conv.bias, 0)
 
     def forward(self, x):
@@ -158,18 +158,18 @@ class NASBinaryCNN(nn.Module):
         self.fc = nn.Linear(in_features=int(n_ch_base * 4 * (IN_H / 8 * IN_W / 8)), out_features=10)
 
     def init_weights(self):
-        nn.init.xavier_normal_(self.conv0.weight)
+        nn.init.kaiming_normal_(self.conv0.weight)
         nn.init.constant_(self.conv0.bias, 0)
-        nn.init.uniform_(self.bn0.weight)
+        nn.init.normal_(self.bn0.weight, 1.0, 0.02)
         nn.init.constant_(self.bn0.bias, 0)
         self.cell1.init_weights()
-        nn.init.xavier_normal_(self.conv1.weight)
+        nn.init.kaiming_normal_(self.conv1.weight)
         nn.init.constant_(self.conv1.bias, 0)
         self.cell2.init_weights()
-        nn.init.xavier_normal_(self.conv2.weight)
+        nn.init.kaiming_normal_(self.conv2.weight)
         nn.init.constant_(self.conv2.bias, 0)
         self.cell3.init_weights()
-        nn.init.xavier_normal_(self.fc.weight)
+        nn.init.kaiming_normal_(self.fc.weight)
         nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x):

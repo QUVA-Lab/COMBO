@@ -30,12 +30,14 @@ def acquisition_expectation(x, inference_samples, partition_samples, n_vertices,
         pred_dist = inference_samples[s].predict(grouped_x, hyper=hyper, verbose=False)
         pred_mean_sample = pred_dist[0].detach()
         pred_var_sample = pred_dist[1].detach()
-        acquisition_sample_list.append(acquisition_func(pred_mean_sample[:, 0], pred_var_sample[:, 0], reference=reference))
+        acquisition_sample_list.append(acquisition_func(pred_mean_sample[:, 0], pred_var_sample[:, 0],
+                                                        reference=reference))
 
     return torch.stack(acquisition_sample_list, 1).sum(1, keepdim=True)
 
 
-def inference_sampling(input_data, output_data, n_vertices, hyper_samples, partition_samples, freq_samples, basis_samples):
+def inference_sampling(input_data, output_data, n_vertices, hyper_samples, partition_samples,
+                       freq_samples, basis_samples):
     """
 
     :param input_data:
@@ -52,7 +54,8 @@ def inference_sampling(input_data, output_data, n_vertices, hyper_samples, parti
         kernel = DiffusionKernel(fourier_freq_list=freq_samples[s], fourier_basis_list=basis_samples[s])
         model = GPRegression(kernel=kernel)
         model.vec_to_param(hyper_samples[s])
-        grouped_input_data = group_input(input_data=input_data, sorted_partition=partition_samples[s], n_vertices=n_vertices)
+        grouped_input_data = group_input(input_data=input_data, sorted_partition=partition_samples[s],
+                                         n_vertices=n_vertices)
         inference = Inference((grouped_input_data, output_data), model=model)
         inference_samples.append(inference)
     return inference_samples

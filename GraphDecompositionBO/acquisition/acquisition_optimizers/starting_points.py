@@ -9,10 +9,11 @@ from GraphDecompositionBO.acquisition.acquisition_functions import expected_impr
 
 N_RANDOM_VERTICES = 20000
 N_GREEDY_ASCENT_INIT = 20
-N_SPRAY = 5
+N_SPRAY = 10
 
 
-def optim_inits(x_opt, inference_samples, partition_samples, edge_mat_samples, n_vertices, acquisition_func=expected_improvement, reference=None):
+def optim_inits(x_opt, inference_samples, partition_samples, edge_mat_samples, n_vertices,
+                acquisition_func=expected_improvement, reference=None):
     """
     :param x_opt: 1D Tensor
     :param inference_samples:

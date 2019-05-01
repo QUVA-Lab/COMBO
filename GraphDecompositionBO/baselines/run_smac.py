@@ -3,10 +3,11 @@ import numpy as np
 import pickle
 from datetime import datetime
 import progressbar
+import multiprocessing as mp
 
 # Import ConfigSpace and different types of parameters
 from smac.configspace import ConfigurationSpace, Configuration
-from ConfigSpace.hyperparameters import CategoricalHyperparameter, UniformIntegerHyperparameter
+from ConfigSpace import CategoricalHyperparameter, UniformIntegerHyperparameter
 
 # Import SMAC-utilities
 from smac.scenario.scenario import Scenario
@@ -14,16 +15,51 @@ from smac.facade.smac_facade import SMAC
 
 import torch
 
-from GraphDecompositionBO.experiments.test_functions import generate_random_seed_pestcontrol, generate_random_seed_pair_centroid
-from GraphDecompositionBO.experiments.test_functions import PESTCONTROL_N_STAGES, CENTROID_GRID, CENTROID_N_EDGES, CENTROID_N_CHOICE, PESTCONTROL_N_CHOICE
-from GraphDecompositionBO.experiments.test_functions import _pest_control_score, Centroid, edge_choice, partition, ising_dense
-from GraphDecompositionBO.experiments.test_functions import Branin
-from GraphDecompositionBO.experiments.test_functions import sample_init_points
-from GraphDecompositionBO.baselines.utils import exp_dir, result_dir
+from GraphDecompositionBO.experiments.random_seed_config import generate_random_seed_pestcontrol, \
+	generate_random_seed_pair_centroid, generate_random_seed_maxsat
+from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PESTCONTROL_N_STAGES, CENTROID_GRID, \
+	CENTROID_N_EDGES, CENTROID_N_CHOICE, PESTCONTROL_N_CHOICE
+from GraphDecompositionBO.experiments.test_functions.multiple_categorical import _pest_control_score, Centroid, \
+	edge_choice, partition, ising_dense
+from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSAT28, MaxSAT43, MaxSAT60
+from GraphDecompositionBO.experiments.exp_utils import sample_init_points
+from GraphDecompositionBO.config import experiment_directory, SMAC_exp_dir
 
 
-EXP_DIR = exp_dir()
-RESULT_DIR = result_dir()
+EXP_DIR = experiment_directory()
+RESULT_DIR = SMAC_exp_dir()
+
+
+def maxsat(n_eval, n_variables, random_seed):
+	assert n_variables in [28, 43, 60]
+	name_tag = 'maxsat' + str(n_variables) + '_' + datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")
+	cs = ConfigurationSpace()
+	for i in range(n_variables):
+		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(n_variables)], default_value='0')
+		cs.add_hyperparameter(car_var)
+	init_points_numpy = sample_init_points([2] * n_variables, 20, random_seed).long().numpy()
+	init_points = []
+	for i in range(init_points_numpy.shape[0]):
+		init_points.append(Configuration(cs, {'x' + str(j + 1).zfill(2): str(init_points_numpy[i][j]) for j in range(n_variables)}))
+
+	if n_variables == 28:
+		evaluator = MaxSAT28(random_seed)
+	elif n_variables == 43:
+		evaluator = MaxSAT43(random_seed)
+	elif n_variables == 60:
+		evaluator = MaxSAT60(random_seed)
+	def evaluate(x):
+		return evaluator.evaluate(torch.LongTensor([int(x['x' + str(j + 1).zfill(2)]) for j in range(n_variables)])).item()
+
+	print('Began    at ' + datetime.now().strftime("%H:%M:%S"))
+	scenario = Scenario({"run_obj": "quality", "runcount-limit": n_eval, "cs": cs, "deterministic": "true",
+	                     'output_dir': os.path.join(EXP_DIR, name_tag)})
+	smac = SMAC(scenario=scenario, tae_runner=evaluate, initial_configurations=init_points)
+	smac.optimize()
+
+	evaluations, optimum = evaluations_from_smac(smac)
+	print('Finished at ' + datetime.now().strftime("%H:%M:%S"))
+	return optimum
 
 
 def pest_control(n_eval, random_seed):
@@ -41,12 +77,14 @@ def pest_control(n_eval, random_seed):
 	def evaluate(x):
 		return _pest_control_score(np.array([int(x['x' + str(j + 1).zfill(2)]) for j in range(PESTCONTROL_N_STAGES)]))
 
+	print('Began    at ' + datetime.now().strftime("%H:%M:%S"))
 	scenario = Scenario({"run_obj": "quality", "runcount-limit": n_eval, "cs": cs, "deterministic": "true",
 	                     'output_dir': os.path.join(EXP_DIR, name_tag)})
 	smac = SMAC(scenario=scenario, tae_runner=evaluate, initial_configurations=init_points)
 	smac.optimize()
 
 	evaluations, optimum = evaluations_from_smac(smac)
+	print('Finished at ' + datetime.now().strftime("%H:%M:%S"))
 	return optimum
 
 
@@ -78,44 +116,21 @@ def centroid(n_eval, random_seed_pair):
 			kld_sum += kld
 		return kld_sum / float(evaluator.n_ising_models)
 
+	print('Began    at ' + datetime.now().strftime("%H:%M:%S"))
 	scenario = Scenario({"run_obj": "quality", "runcount-limit": n_eval, "cs": cs, "deterministic": "true",
 	                     'output_dir': os.path.join(EXP_DIR, name_tag)})
 	smac = SMAC(scenario=scenario, tae_runner=evaluate, initial_configurations=init_points)
 	smac.optimize()
 
 	evaluations, optimum = evaluations_from_smac(smac)
+	print('Finished at ' + datetime.now().strftime("%H:%M:%S"))
 	return optimum
 
 
-def branin(n_eval, random_seed):
-	name_tag = 'branin_' + datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")
-	evaluator = Branin()
-	cs = ConfigurationSpace()
-	for i in range(len(evaluator.n_vertices)):
-		var = UniformIntegerHyperparameter('x' + str(i + 1), int(0), int(evaluator.n_vertices[i] - 1), default_value=25)
-		cs.add_hyperparameter(var)
-
-	init_points_numpy = sample_init_points(evaluator.n_vertices, 2, random_seed).long().numpy()
-	init_points = []
-	for i in range(init_points_numpy.shape[0]):
-		init_points.append(Configuration(cs, {'x' + str(j + 1): int(init_points_numpy[i][j]) for j in range(len(evaluator.n_vertices))}))
-
-	def evaluate(x):
-		return evaluator.evaluate(torch.from_numpy(np.array([x['x' + str(j + 1)] for j in range(len(evaluator.n_vertices))]))).item()
-
-	scenario = Scenario({"run_obj": "quality", "runcount-limit": n_eval, "cs": cs, "deterministic": "true",
-	                     'output_dir': os.path.join(EXP_DIR, name_tag)})
-	smac = SMAC(scenario=scenario, tae_runner=evaluate, initial_configurations=init_points)
-	smac.optimize()
-
-	evaluations, optimum = evaluations_from_smac(smac)
-	return optimum
-
-
-def multiple_runs(problem):
+def multiple_runs(problem, parallel=True):
 	print('Optimizing %s' % problem)
 	if problem == 'pestcontrol':
-		n_eval = 250
+		n_eval = 320
 		random_seeds = sorted(generate_random_seed_pestcontrol())
 		runs = None
 		bar = progressbar.ProgressBar(max_value=len(random_seeds))
@@ -136,7 +151,7 @@ def multiple_runs(problem):
 		for i in range(len(random_seed_pairs.keys())):
 			case_seed = sorted(random_seed_pairs.keys())[i]
 			for j in range(len(random_seed_pairs[case_seed])):
-				init_seed = random_seed_pairs[case_seed][j]
+				init_seed = sorted(random_seed_pairs[case_seed])[j]
 				optimum = centroid(n_eval, (case_seed, init_seed))
 				bar_cnt += 1
 				bar.update(bar_cnt)
@@ -144,14 +159,20 @@ def multiple_runs(problem):
 					runs = optimum.reshape(-1, 1)
 				else:
 					runs = np.hstack([runs, optimum.reshape(-1, 1)])
-	elif problem == 'branin':
-		n_eval = 100
-		random_seeds = range(25)
+	elif problem in ['maxsat28', 'maxsat43', 'maxsat60']:
+		n_variables = int(problem[-2:])
+		n_eval = 270
+		random_seeds = sorted(generate_random_seed_maxsat())
 		runs = None
-		bar = progressbar.ProgressBar(max_value=len(random_seeds))
-		for i in range(len(random_seeds)):
-			optimum = branin(n_eval, random_seeds[i])
-			bar.update(i)
+		n_runs = 10
+
+		bar = progressbar.ProgressBar(max_value=n_runs)
+		bar_cnt = 0
+		for i in range(n_runs):
+			init_seed = random_seeds[i]
+			optimum = maxsat(n_eval, n_variables, init_seed)
+			bar_cnt += 1
+			bar.update(bar_cnt)
 			if runs is None:
 				runs = optimum.reshape(-1, 1)
 			else:
@@ -179,5 +200,9 @@ def evaluations_from_smac(smac):
 
 
 if __name__ == '__main__':
-	mean, std = multiple_runs('branin')
+	mean, std = multiple_runs('maxsat28')
+	print(np.hstack([mean.reshape(-1, 1), std.reshape(-1, 1)]))
+	mean, std = multiple_runs('maxsat43')
+	print(np.hstack([mean.reshape(-1, 1), std.reshape(-1, 1)]))
+	mean, std = multiple_runs('maxsat60')
 	print(np.hstack([mean.reshape(-1, 1), std.reshape(-1, 1)]))

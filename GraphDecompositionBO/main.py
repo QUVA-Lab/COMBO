@@ -78,7 +78,7 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
         surrogate_model.init_param(eval_outputs)
         print('(%s) Burn-in' % time.strftime('%H:%M:%S', time.gmtime()))
         sample_posterior = posterior_sampling(surrogate_model, eval_inputs, eval_outputs, n_vertices, adj_mat_list,
-                                              log_beta, sorted_partition, n_sample=1, n_burn=9, n_thin=1,
+                                              log_beta, sorted_partition, n_sample=1, n_burn=99, n_thin=1,
                                               learn_graph=learn_graph)
         log_beta = sample_posterior[1][0]
         sorted_partition = sample_posterior[2][0]
@@ -101,7 +101,7 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
         x_opt = eval_inputs[torch.argmin(eval_outputs)]
         inference_samples = inference_sampling(eval_inputs, eval_outputs, n_vertices,
                                                hyper_samples, partition_samples, freq_samples, basis_samples)
-        suggestion = next_evaluation(x_opt, eval_inputs, inference_samples, partition_samples, edge_mat_samples,
+        suggestion = next_evaluation(x_opt, inference_samples, partition_samples, edge_mat_samples,
                                      n_vertices, acquisition_func, reference, parallel)
         next_eval, pred_mean, pred_std, pred_var = suggestion
 
