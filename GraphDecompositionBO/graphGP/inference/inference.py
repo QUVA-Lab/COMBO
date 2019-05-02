@@ -23,19 +23,17 @@ class Inference(nn.Module):
 		if hyper is not None:
 			self.model.vec_to_param(hyper)
 		self.mean_vec = self.train_y - self.model.mean(self.train_x.float())
-		kernel_mat = self.model.kernel(self.train_x)
-		noise_diag = torch.diag(self.model.likelihood(self.train_x.float()))
-		if torch.isnan(kernel_mat).any():
-			assert not torch.isnan(torch.exp(self.model.kernel.log_amp)).any()
-			for freq, basis in zip(self.model.kernel.fourier_freq_list, self.model.kernel.fourier_basis_list):
-				assert not torch.isnan(freq).any()
-				assert not torch.isnan(torch.exp(-freq)).any()
-				assert not torch.isnan(basis).any()
-		assert not torch.isnan(noise_diag).any()
-		self.gram_mat = kernel_mat + noise_diag
+		self.gram_mat = self.model.kernel(self.train_x) + torch.diag(self.model.likelihood(self.train_x.float()))
 
 	def cholesky_update(self, hyper):
 		self.gram_mat_update(hyper)
+		try:
+			assert not torch.isnan(self.gram_mat).any()
+			assert not torch.isnan(torch.trace(self.gram_mat)).any()
+		except AssertionError:
+			print(self.gram_mat)
+			print(torch.trace(self.gram_mat))
+			raise RuntimeError('Gram Matrix has NaN?')
 		eye_mat = torch.diag(self.gram_mat.new_ones(self.gram_mat.size(0)))
 		for jitter_const in [0, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]:
 			chol_jitter = torch.trace(self.gram_mat).item() * jitter_const
@@ -96,7 +94,7 @@ if __name__ == '__main__':
 	jitter_const_ = 0
 	for _ in range(10):
 		A_ = torch.randn(n_size_, n_size_ - 2)
-		A_ = A_.matmul(A_.t())
+		A_ = A_.matmul(A_.t()) * 0 + 1e-6
 		A_ = A_ + torch.diag(torch.ones(n_size_)) * jitter_const_ * torch.trace(A_).item()
 		b_ = torch.randn(n_size_, 3)
 		L_ = torch.cholesky(A_, upper=False)
