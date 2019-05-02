@@ -88,8 +88,10 @@ class DiffusionKernel(GraphKernel):
 				print(factor_gram)
 				raise RuntimeError('Inf in factor_gram')
 			if torch.isnan(1.0/torch.mean(freq_transform)).any():
+				print(freq_transform)
 				raise RuntimeError('Nan in 1.0/torch.mean(freq_transform)')
 			if torch.isinf(1.0/torch.mean(freq_transform)).any():
+				print(freq_transform)
 				raise RuntimeError('Inf in 1.0/torch.mean(freq_transform)')
 			if torch.isnan(full_gram).any():
 				print(full_gram)
