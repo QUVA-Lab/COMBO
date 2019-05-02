@@ -26,7 +26,7 @@ class Inference(nn.Module):
 		kernel_mat = self.model.kernel(self.train_x)
 		noise_diag = torch.diag(self.model.likelihood(self.train_x.float()))
 		if not torch.isnan(kernel_mat).any():
-			assert not torch.isnan(torch.exp(self.log_amp)).any()
+			assert not torch.isnan(torch.exp(self.model.kernel.log_amp)).any()
 			for freq, basis in zip(self.model.kernel.fourier_freq_list, self.model.kernel.fourier_basis_list):
 				assert not torch.isnan(freq).any()
 				assert not torch.isnan(torch.exp(-freq)).any()
