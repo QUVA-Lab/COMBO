@@ -50,6 +50,19 @@ class DiffusionKernel(GraphKernel):
 			subvec2 = fourier_basis[x2[:, i]]
 			freq_transform = torch.exp(-fourier_freq)
 
+
+			if torch.isnan(subvec1).any():
+				print(subvec1)
+				raise RuntimeError('Nan in subvec1')
+			if torch.isinf(subvec1).any():
+				print(subvec1)
+				raise RuntimeError('Inf in subvec1')
+			if torch.isnan(subvec2).any():
+				print(subvec2)
+				raise RuntimeError('Nan in subvec2')
+			if torch.isinf(subvec2).any():
+				print(subvec2)
+				raise RuntimeError('Inf in subvec2')
 			if torch.isnan(freq_transform).any():
 				print(freq_transform)
 				raise RuntimeError('Nan in freq_transform')
@@ -68,6 +81,16 @@ class DiffusionKernel(GraphKernel):
 			# HACK for numerical stability for scalability
 			full_gram *= factor_gram / torch.mean(freq_transform)
 
+			if torch.isnan(factor_gram).any():
+				print(factor_gram)
+				raise RuntimeError('Nan in factor_gram')
+			if torch.isinf(factor_gram).any():
+				print(factor_gram)
+				raise RuntimeError('Inf in factor_gram')
+			if torch.isnan(1.0/torch.mean(freq_transform)).any():
+				raise RuntimeError('Nan in 1.0/torch.mean(freq_transform)')
+			if torch.isinf(1.0/torch.mean(freq_transform)).any():
+				raise RuntimeError('Inf in 1.0/torch.mean(freq_transform)')
 			if torch.isnan(full_gram).any():
 				print(full_gram)
 				raise RuntimeError('Nan in full_gram')
