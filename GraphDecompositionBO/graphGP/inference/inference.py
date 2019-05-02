@@ -15,6 +15,7 @@ class Inference(nn.Module):
 		self.output_max = torch.max(self.train_y)
 		self.mean_vec = None
 		self.gram_mat = None
+		# cholesky is lower triangular matrix
 		self.cholesky = None
 		self.jitter = 0
 
@@ -28,13 +29,13 @@ class Inference(nn.Module):
 		self.gram_mat_update(hyper)
 		eye_mat = torch.diag(self.gram_mat.new_ones(self.gram_mat.size(0)))
 		chol_jitter = 0
-		while True:
-			try:
-				self.cholesky = torch.cholesky(self.gram_mat + eye_mat * chol_jitter, False)
-				torch.gesv(self.gram_mat[:, :1], self.cholesky)
-				break
-			except RuntimeError:
-				chol_jitter = self.gram_mat[0, 0] * 1e-6 if chol_jitter == 0 else chol_jitter * 10
+		try:
+			# cholesky is lower triangular matrix
+			self.cholesky = torch.cholesky(self.gram_mat, upper=False)
+			assert (torch.diag(self.cholesky) > 0).all()
+		except RuntimeError:
+			chol_jitter = torch.trace(self.gram_mat).item() * 1e-8
+			self.cholesky = torch.cholesky(self.gram_mat + eye_mat * chol_jitter, upper=False)
 		self.jitter = chol_jitter
 
 	def predict(self, pred_x, hyper=None, verbose=False):
@@ -45,7 +46,8 @@ class Inference(nn.Module):
 		k_pred_train = self.model.kernel(pred_x, self.train_x)
 		k_pred = self.model.kernel(pred_x, diagonal=True)
 
-		chol_solver = torch.gesv(torch.cat([k_pred_train.t(), self.mean_vec], 1), self.cholesky)[0]
+		# cholesky is lower triangular matrix
+		chol_solver = torch.triangular_solve(torch.cat([k_pred_train.t(), self.mean_vec], 1), self.cholesky, upper=False)[0]
 		chol_solve_k = chol_solver[:, :-1]
 		chol_solve_y = chol_solver[:, -1:]
 
@@ -69,7 +71,8 @@ class Inference(nn.Module):
 		if hyper is not None:
 			param_original = self.model.param_to_vec()
 			self.cholesky_update(hyper)
-		mean_vec_sol = torch.gesv(self.mean_vec, self.cholesky)[0]
+		# cholesky is lower triangular matrix
+		mean_vec_sol = torch.triangular_solve(self.mean_vec, self.cholesky, upper=False)[0]
 		nll = 0.5 * torch.sum(mean_vec_sol ** 2) + torch.sum(torch.log(torch.diag(self.cholesky))) + 0.5 * self.train_y.size(0) * np.log(2 * np.pi)
 		if hyper is not None:
 			self.cholesky_update(param_original)
@@ -77,4 +80,20 @@ class Inference(nn.Module):
 
 
 if __name__ == '__main__':
-	pass
+	n_size_ = 50
+	jitter_const = 0
+	for _ in range(10):
+		A_ = torch.randn(n_size_, n_size_ - 2)
+		A_ = A_.matmul(A_.t())
+		A_ = A_ + torch.diag(torch.ones(n_size_)) * jitter_const * torch.trace(A_).item()
+		b_ = torch.randn(n_size_, 3)
+		L_ = torch.cholesky(A_, upper=False)
+		assert (torch.diag(L_) > 0).all()
+		abs_min = torch.min(torch.abs(A_)).item()
+		abs_max = torch.max(torch.abs(A_)).item()
+		trace = torch.trace(A_).item()
+		print('            %.4E~%.4E      %.4E' % (abs_min, abs_max, trace))
+		print('     jitter:%.4E' % (trace * jitter_const))
+		print('The smallest eigen value : %.4E\n' % torch.min(torch.diag(L_)).item())
+		torch.triangular_solve(b_, L_, upper=False)
+

@@ -80,6 +80,6 @@ def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
 		          + '#' * progress_mark_len + '-' * (PROGRESS_BAR_LEN - progress_mark_len) + '|'
 		progress_str = fmt_str % (time.strftime('%H:%M:%S', time.gmtime()),
 		                          int((s + 1.0) / n_sample_total * 100), s + 1, n_sample_total)
-		sys.stdout.write('\b' * len(progress_str) + progress_str)
+		sys.stdout.write(('\b' * len(progress_str)) + progress_str)
 		sys.stdout.flush()
 	return hyper_samples, log_beta_samples, partition_samples, freq_samples, basis_samples, edge_mat_samples
