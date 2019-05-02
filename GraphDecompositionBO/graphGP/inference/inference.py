@@ -34,8 +34,12 @@ class Inference(nn.Module):
 			self.cholesky = torch.cholesky(self.gram_mat, upper=False)
 			assert (torch.diag(self.cholesky) > 0).all()
 		except RuntimeError:
-			chol_jitter = torch.trace(self.gram_mat).item() * 1e-8
-			self.cholesky = torch.cholesky(self.gram_mat + eye_mat * chol_jitter, upper=False)
+			try:
+				chol_jitter = torch.trace(self.gram_mat).item() * 1e-8
+				self.cholesky = torch.cholesky(self.gram_mat + eye_mat * chol_jitter, upper=False)
+			except RuntimeError:
+				chol_jitter = torch.trace(self.gram_mat).item() * 1e-7
+				self.cholesky = torch.cholesky(self.gram_mat + eye_mat * chol_jitter, upper=False)
 		self.jitter = chol_jitter
 
 	def predict(self, pred_x, hyper=None, verbose=False):
