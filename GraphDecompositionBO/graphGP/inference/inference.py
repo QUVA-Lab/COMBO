@@ -34,7 +34,7 @@ class Inference(nn.Module):
 				# cholesky is lower triangular matrix
 				self.cholesky = torch.cholesky(self.gram_mat + eye_mat * chol_jitter, upper=False)
 				self.jitter = chol_jitter
-				break
+				return
 			except RuntimeError:
 				pass
 		raise RuntimeError('Absolute entry values of Gram matrix are between %.4E~%.4E with trace %.4E' %
