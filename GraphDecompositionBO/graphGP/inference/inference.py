@@ -33,10 +33,13 @@ class Inference(nn.Module):
 			try:
 				# cholesky is lower triangular matrix
 				self.cholesky = torch.cholesky(self.gram_mat + eye_mat * chol_jitter, upper=False)
+				self.jitter = chol_jitter
 				break
 			except RuntimeError:
 				pass
-		self.jitter = chol_jitter
+		raise RuntimeError('Absolute entry values of Gram matrix are between %.4E~%.4E with trace %.4E' %
+		                   (torch.min(torch.abs(self.gram_mat)).item(), torch.max(torch.abs(self.gram_mat)).item(),
+		                    torch.trace(self.gram_mat).item()))
 
 	def predict(self, pred_x, hyper=None, verbose=False):
 		if hyper is not None:
@@ -81,11 +84,11 @@ class Inference(nn.Module):
 
 if __name__ == '__main__':
 	n_size_ = 50
-	jitter_const = 0
+	jitter_const_ = 0
 	for _ in range(10):
 		A_ = torch.randn(n_size_, n_size_ - 2)
 		A_ = A_.matmul(A_.t())
-		A_ = A_ + torch.diag(torch.ones(n_size_)) * jitter_const * torch.trace(A_).item()
+		A_ = A_ + torch.diag(torch.ones(n_size_)) * jitter_const_ * torch.trace(A_).item()
 		b_ = torch.randn(n_size_, 3)
 		L_ = torch.cholesky(A_, upper=False)
 		assert (torch.diag(L_) > 0).all()
@@ -93,7 +96,7 @@ if __name__ == '__main__':
 		abs_max = torch.max(torch.abs(A_)).item()
 		trace = torch.trace(A_).item()
 		print('            %.4E~%.4E      %.4E' % (abs_min, abs_max, trace))
-		print('     jitter:%.4E' % (trace * jitter_const))
+		print('     jitter:%.4E' % (trace * jitter_const_))
 		print('The smallest eigen value : %.4E\n' % torch.min(torch.diag(L_)).item())
 		torch.triangular_solve(b_, L_, upper=False)
 
