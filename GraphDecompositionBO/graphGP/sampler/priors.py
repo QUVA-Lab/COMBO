@@ -31,7 +31,7 @@ def log_prior_constmean(constmean, output_min, output_max):
 	# return 0
 	# Truncated Gaussian
 	stable_dev = output_rad / 2.0
-	return -np.log(stable_dev) - 0.5 * (constmean - output_mid) ** 2 / (stable_dev) ** 2
+	return -np.log(stable_dev) - 0.5 * (constmean - output_mid) ** 2 / stable_dev ** 2
 
 
 def log_prior_noisevar(log_noise_var):

@@ -23,7 +23,16 @@ class Inference(nn.Module):
 		if hyper is not None:
 			self.model.vec_to_param(hyper)
 		self.mean_vec = self.train_y - self.model.mean(self.train_x.float())
-		self.gram_mat = self.model.kernel(self.train_x) + torch.diag(self.model.likelihood(self.train_x.float()))
+		kernel_mat = self.model.kernel(self.train_x)
+		noise_diag = torch.diag(self.model.likelihood(self.train_x.float()))
+		if not torch.isnan(kernel_mat).any():
+			assert not torch.isnan(torch.exp(self.log_amp)).any()
+			for freq, basis in zip(self.model.kernel.fourier_freq_list, self.model.kernel.fourier_basis_list):
+				assert not torch.isnan(freq).any()
+				assert not torch.isnan(torch.exp(-freq)).any()
+				assert not torch.isnan(basis).any()
+		assert not torch.isnan(noise_diag).any()
+		self.gram_mat = kernel_mat + noise_diag
 
 	def cholesky_update(self, hyper):
 		self.gram_mat_update(hyper)
