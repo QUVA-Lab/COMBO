@@ -30,15 +30,51 @@ class DiffusionKernel(GraphKernel):
 
 		full_gram = 1
 		for i in range(len(self.fourier_freq_list)):
-			subvec1 = self.fourier_basis_list[i][x1[:, i]]
-			subvec2 = self.fourier_basis_list[i][x2[:, i]]
-			freq_transform = torch.exp(-self.fourier_freq_list[i])
+			fourier_freq = self.fourier_freq_list[i]
+			fourier_basis = self.fourier_basis_list[i]
+
+			if torch.isnan(fourier_freq).any():
+				print(fourier_freq)
+				raise RuntimeError('Nan in Frequency')
+			if torch.isinf(fourier_freq).any():
+				print(fourier_freq)
+				raise RuntimeError('Inf in Frequency')
+			if torch.isnan(fourier_basis).any():
+				print(fourier_basis)
+				raise RuntimeError('Nan in Basis')
+			if torch.isinf(fourier_basis).any():
+				print(fourier_basis)
+				raise RuntimeError('Inf in Basis')
+
+			subvec1 = fourier_basis[x1[:, i]]
+			subvec2 = fourier_basis[x2[:, i]]
+			freq_transform = torch.exp(-fourier_freq)
+
+			if torch.isnan(freq_transform).any():
+				print(freq_transform)
+				raise RuntimeError('Nan in freq_transform')
+			if torch.isinf(freq_transform).any():
+				print(freq_transform)
+				raise RuntimeError('Inf in freq_transform')
+			if torch.isnan(torch.exp(self.log_amp)).any():
+				raise RuntimeError('Nan in exp(log_amp)')
+			if torch.isinf(torch.exp(self.log_amp)).any():
+				raise RuntimeError('Inf in exp(log_amp)')
+
 			if diagonal:
 				factor_gram = torch.sum(subvec1 * freq_transform.unsqueeze(0) * subvec2, dim=1, keepdim=True)
 			else:
 				factor_gram = torch.matmul(subvec1 * freq_transform.unsqueeze(0), subvec2.t())
 			# HACK for numerical stability for scalability
 			full_gram *= factor_gram / torch.mean(freq_transform)
+
+			if torch.isnan(full_gram).any():
+				print(full_gram)
+				raise RuntimeError('Nan in full_gram')
+			if torch.isinf(full_gram).any():
+				print(full_gram)
+				raise RuntimeError('Inf in full_gram')
+
 		return torch.exp(self.log_amp) * (full_gram + stabilizer)
 
 
