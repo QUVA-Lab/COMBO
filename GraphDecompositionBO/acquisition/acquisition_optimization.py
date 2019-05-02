@@ -87,38 +87,45 @@ def next_evaluation(x_opt, inference_samples, partition_samples, edge_mat_sample
     sys.stdout.write('and took %s\n' % time.strftime('%H:%M:%S', time.gmtime(time.time() - ga_start_time)))
     print('  '.join(['%4.2f' % ga_opt_acq[i] for i in range(n_inits)]))
 
-    x_rands = torch.cat(tuple([torch.randint(low=0, high=int(n_v), size=(N_SA_RUN, 1))
-                               for n_v in n_vertices]), dim=1).long()
-    sa_args_list = [(x_rands[i], inference_samples, partition_samples, edge_mat_samples,
-                     n_vertices, acquisition_func, reference) for i in range(N_SA_RUN)]
-    sa_start_time = time.time()
-    sys.stdout.write('    Sim. Annealing began at %s ' % time.strftime('%H:%M:%S', time.gmtime(sa_start_time)))
-    if parallel:
-        with mp.Pool(processes=min(N_SA_RUN, N_CPU // 2)) as pool:
-            sa_result = []
-            process_started = [False] * N_SA_RUN
-            process_running = [False] * N_SA_RUN
-            process_index = 0
-            while process_started.count(False) > 0:
-                cpu_usage = psutil.cpu_percent(1.0)
-                run_more = (100.0 - cpu_usage) * float(psutil.cpu_count()) > 100.0 * N_AVAILABLE_CORE
-                if run_more:
-                    sa_result.append(pool.apply_async(simulated_annealing, args=sa_args_list[process_index]))
-                    process_started[process_index] = True
-                    process_running[process_index] = True
-                    process_index += 1
-            while [not res.ready() for res in sa_result].count(True) > 0:
-                time.sleep(1)
+    opt_vrt = list(ga_opt_vrt[:])
+    opt_acq = list(ga_opt_acq[:])
 
-            sa_return_values = [res.get() for res in sa_result]
-    else:
-        sa_return_values = [simulated_annealing(*(sa_args_list[i])) for i in range(N_SA_RUN)]
-    sa_opt_vrt, sa_opt_acq = zip(*sa_return_values)
-    sys.stdout.write('and took %s\n' % time.strftime('%H:%M:%S', time.gmtime(time.time() - sa_start_time)))
-    print('  '.join(['%4.2f' % sa_opt_acq[i] for i in range(N_SA_RUN)]))
-
-    opt_vrt = list(ga_opt_vrt[:]) + list(sa_opt_vrt[:])
-    opt_acq = list(ga_opt_acq[:]) + list(sa_opt_acq[:])
+    ## Optimization using simulated annealing,
+    ## 1. First optimize with Greedy Ascent, then do additional optimization with that results with Simulated Annealing
+    ## 2. Optimize with a different set of initial points for Greedy Ascent and Simulated Annealing and choose the best
+    ## Both does not any improvement on the result solely from Greedy Ascent
+    # x_rands = torch.cat(tuple([torch.randint(low=0, high=int(n_v), size=(N_SA_RUN, 1))
+    #                            for n_v in n_vertices]), dim=1).long()
+    # sa_args_list = [(x_rands[i], inference_samples, partition_samples, edge_mat_samples,
+    #                  n_vertices, acquisition_func, reference) for i in range(N_SA_RUN)]
+    # sa_start_time = time.time()
+    # sys.stdout.write('    Sim. Annealing began at %s ' % time.strftime('%H:%M:%S', time.gmtime(sa_start_time)))
+    # if parallel:
+    #     with mp.Pool(processes=min(N_SA_RUN, N_CPU // 2)) as pool:
+    #         sa_result = []
+    #         process_started = [False] * N_SA_RUN
+    #         process_running = [False] * N_SA_RUN
+    #         process_index = 0
+    #         while process_started.count(False) > 0:
+    #             cpu_usage = psutil.cpu_percent(1.0)
+    #             run_more = (100.0 - cpu_usage) * float(psutil.cpu_count()) > 100.0 * N_AVAILABLE_CORE
+    #             if run_more:
+    #                 sa_result.append(pool.apply_async(simulated_annealing, args=sa_args_list[process_index]))
+    #                 process_started[process_index] = True
+    #                 process_running[process_index] = True
+    #                 process_index += 1
+    #         while [not res.ready() for res in sa_result].count(True) > 0:
+    #             time.sleep(1)
+    #
+    #         sa_return_values = [res.get() for res in sa_result]
+    # else:
+    #     sa_return_values = [simulated_annealing(*(sa_args_list[i])) for i in range(N_SA_RUN)]
+    # sa_opt_vrt, sa_opt_acq = zip(*sa_return_values)
+    # sys.stdout.write('and took %s\n' % time.strftime('%H:%M:%S', time.gmtime(time.time() - sa_start_time)))
+    # print('  '.join(['%4.2f' % sa_opt_acq[i] for i in range(N_SA_RUN)]))
+    #
+    # opt_vrt = opt_vrt + list(sa_opt_vrt[:])
+    # opt_acq = opt_acq + list(sa_opt_acq[:])
 
     acq_max_inds = np.where(np.max(opt_acq) == np.array(opt_acq))[0]
     acq_max_ind = acq_max_inds[np.random.randint(0, acq_max_inds.size)]
