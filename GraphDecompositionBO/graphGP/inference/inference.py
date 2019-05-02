@@ -28,18 +28,14 @@ class Inference(nn.Module):
 	def cholesky_update(self, hyper):
 		self.gram_mat_update(hyper)
 		eye_mat = torch.diag(self.gram_mat.new_ones(self.gram_mat.size(0)))
-		chol_jitter = 0
-		try:
-			# cholesky is lower triangular matrix
-			self.cholesky = torch.cholesky(self.gram_mat, upper=False)
-			assert (torch.diag(self.cholesky) > 0).all()
-		except RuntimeError:
+		for jitter_const in [0, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]:
+			chol_jitter = torch.trace(self.gram_mat).item() * jitter_const
 			try:
-				chol_jitter = torch.trace(self.gram_mat).item() * 1e-8
+				# cholesky is lower triangular matrix
 				self.cholesky = torch.cholesky(self.gram_mat + eye_mat * chol_jitter, upper=False)
+				break
 			except RuntimeError:
-				chol_jitter = torch.trace(self.gram_mat).item() * 1e-7
-				self.cholesky = torch.cholesky(self.gram_mat + eye_mat * chol_jitter, upper=False)
+				pass
 		self.jitter = chol_jitter
 
 	def predict(self, pred_x, hyper=None, verbose=False):
