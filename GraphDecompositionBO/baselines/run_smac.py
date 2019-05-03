@@ -1,9 +1,9 @@
 import os
+import sys
 import numpy as np
 import pickle
 from datetime import datetime
 import progressbar
-import multiprocessing as mp
 
 # Import ConfigSpace and different types of parameters
 from smac.configspace import ConfigurationSpace, Configuration
@@ -17,9 +17,12 @@ import torch
 
 from GraphDecompositionBO.experiments.random_seed_config import generate_random_seed_pestcontrol, \
 	generate_random_seed_pair_centroid, generate_random_seed_maxsat
+from GraphDecompositionBO.experiments.test_functions.binary_categorical import ISING_N_EDGES, CONTAMINATION_N_STAGES
+from GraphDecompositionBO.experiments.test_functions.binary_categorical import _bocs_consistency_mapping
+from GraphDecompositionBO.experiments.test_functions.binary_categorical import Ising, Contamination
 from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PESTCONTROL_N_STAGES, CENTROID_GRID, \
 	CENTROID_N_EDGES, CENTROID_N_CHOICE, PESTCONTROL_N_CHOICE
-from GraphDecompositionBO.experiments.test_functions.multiple_categorical import _pest_control_score, Centroid, \
+from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PestControl, Centroid, \
 	edge_choice, partition, ising_dense
 from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSAT28, MaxSAT43, MaxSAT60
 from GraphDecompositionBO.experiments.exp_utils import sample_init_points
@@ -30,26 +33,85 @@ EXP_DIR = experiment_directory()
 RESULT_DIR = SMAC_exp_dir()
 
 
-def maxsat(n_eval, n_variables, random_seed):
-	assert n_variables in [28, 43, 60]
-	name_tag = 'maxsat' + str(n_variables) + '_' + datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")
+def ising(n_eval, lamda, random_seed_pair):
+	evaluator = Ising(random_seed_pair)
+	evaluator.lamda = lamda
+	name_tag = '_'.join(['ising',  ('%.2E' % lamda), datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")])
 	cs = ConfigurationSpace()
-	for i in range(n_variables):
-		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(n_variables)], default_value='0')
+	for i in range(ISING_N_EDGES):
+		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(ISING_N_EDGES)], default_value='0')
 		cs.add_hyperparameter(car_var)
-	init_points_numpy = sample_init_points([2] * n_variables, 20, random_seed).long().numpy()
+
+	init_points_numpy = evaluator.suggested_init.long().numpy()
 	init_points = []
 	for i in range(init_points_numpy.shape[0]):
-		init_points.append(Configuration(cs, {'x' + str(j + 1).zfill(2): str(init_points_numpy[i][j]) for j in range(n_variables)}))
+		init_points.append(Configuration(cs, {'x' + str(j + 1).zfill(2): str(init_points_numpy[i][j]) for j in range(ISING_N_EDGES)}))
 
+	def evaluate(x):
+		x_tensor = torch.LongTensor([int(x['x' + str(j + 1).zfill(2)]) for j in range(ISING_N_EDGES)])
+		return evaluator.evaluate(x_tensor).item()
+
+	print('Began    at ' + datetime.now().strftime("%H:%M:%S"))
+	scenario = Scenario({"run_obj": "quality", "runcount-limit": n_eval, "cs": cs, "deterministic": "true",
+	                     'output_dir': os.path.join(EXP_DIR, name_tag)})
+	smac = SMAC(scenario=scenario, tae_runner=evaluate, initial_configurations=init_points)
+	smac.optimize()
+
+	evaluations, optimum = evaluations_from_smac(smac)
+	print('Finished at ' + datetime.now().strftime("%H:%M:%S"))
+	return optimum
+
+
+def contamination(n_eval, random_seed_pair, lamda=0.01):
+	evaluator = Contamination(random_seed_pair)
+	evaluator.lamda = lamda
+	name_tag = '_'.join(['contamination',  ('%.2E' % lamda), datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")])
+	cs = ConfigurationSpace()
+	for i in range(CONTAMINATION_N_STAGES):
+		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(CONTAMINATION_N_STAGES)], default_value='0')
+		cs.add_hyperparameter(car_var)
+
+	init_points_numpy = evaluator.suggested_init.long().numpy()
+	init_points = []
+	for i in range(init_points_numpy.shape[0]):
+		init_points.append(Configuration(cs, {'x' + str(j + 1).zfill(2): str(init_points_numpy[i][j]) for j in range(CONTAMINATION_N_STAGES)}))
+
+	def evaluate(x):
+		x_tensor = torch.LongTensor([int(x['x' + str(j + 1).zfill(2)]) for j in range(CONTAMINATION_N_STAGES)])
+		return evaluator.evaluate(x_tensor).item()
+
+	print('Began    at ' + datetime.now().strftime("%H:%M:%S"))
+	scenario = Scenario({"run_obj": "quality", "runcount-limit": n_eval, "cs": cs, "deterministic": "true",
+	                     'output_dir': os.path.join(EXP_DIR, name_tag)})
+	smac = SMAC(scenario=scenario, tae_runner=evaluate, initial_configurations=init_points)
+	smac.optimize()
+
+	evaluations, optimum = evaluations_from_smac(smac)
+	print('Finished at ' + datetime.now().strftime("%H:%M:%S"))
+	return optimum
+
+
+def maxsat(n_eval, n_variables, random_seed):
+	assert n_variables in [28, 43, 60]
 	if n_variables == 28:
 		evaluator = MaxSAT28(random_seed)
 	elif n_variables == 43:
 		evaluator = MaxSAT43(random_seed)
 	elif n_variables == 60:
 		evaluator = MaxSAT60(random_seed)
+	name_tag = 'maxsat' + str(n_variables) + '_' + datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")
+	cs = ConfigurationSpace()
+	for i in range(n_variables):
+		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(n_variables)], default_value='0')
+		cs.add_hyperparameter(car_var)
+	init_points_numpy = evaluator.suggested_init.long().numpy()
+	init_points = []
+	for i in range(init_points_numpy.shape[0]):
+		init_points.append(Configuration(cs, {'x' + str(j + 1).zfill(2): str(init_points_numpy[i][j]) for j in range(n_variables)}))
+
 	def evaluate(x):
-		return evaluator.evaluate(torch.LongTensor([int(x['x' + str(j + 1).zfill(2)]) for j in range(n_variables)])).item()
+		x_tensor = torch.LongTensor([int(x['x' + str(j + 1).zfill(2)]) for j in range(n_variables)])
+		return evaluator.evaluate(x_tensor).item()
 
 	print('Began    at ' + datetime.now().strftime("%H:%M:%S"))
 	scenario = Scenario({"run_obj": "quality", "runcount-limit": n_eval, "cs": cs, "deterministic": "true",
@@ -63,6 +125,7 @@ def maxsat(n_eval, n_variables, random_seed):
 
 
 def pest_control(n_eval, random_seed):
+	evaluator = PestControl(random_seed)
 	name_tag = 'pestcontrol_' + datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")
 	cs = ConfigurationSpace()
 	for i in range(PESTCONTROL_N_STAGES):
@@ -75,7 +138,8 @@ def pest_control(n_eval, random_seed):
 		init_points.append(Configuration(cs, {'x' + str(j + 1).zfill(2): str(init_points_numpy[i][j]) for j in range(PESTCONTROL_N_STAGES)}))
 
 	def evaluate(x):
-		return _pest_control_score(np.array([int(x['x' + str(j + 1).zfill(2)]) for j in range(PESTCONTROL_N_STAGES)]))
+		x_tensor = torch.LongTensor([int(x['x' + str(j + 1).zfill(2)]) for j in range(PESTCONTROL_N_STAGES)])
+		return evaluator.evalute(x_tensor).item()
 
 	print('Began    at ' + datetime.now().strftime("%H:%M:%S"))
 	scenario = Scenario({"run_obj": "quality", "runcount-limit": n_eval, "cs": cs, "deterministic": "true",
@@ -200,6 +264,6 @@ def evaluations_from_smac(smac):
 
 
 if __name__ == '__main__':
-	mean, std = multiple_runs('maxsat28')
+	mean, std = multiple_runs(sys.argv[1])
 	print(np.hstack([mean.reshape(-1, 1), std.reshape(-1, 1)]))
 

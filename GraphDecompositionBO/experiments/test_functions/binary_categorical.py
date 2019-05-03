@@ -96,9 +96,13 @@ class Ising(object):
         self.covariance, self.partition_original = spin_covariance(self.interaction, (ISING_GRID_H, ISING_GRID_W))
 
     def evaluate(self, x):
-        assert x.numel() == len(self.n_vertices)
-        if x.dim() == 2:
-            x = x.squeeze(0)
+        if x.dim() == 1:
+            x = x.unsqueeze(0)
+        assert x.size(1) == len(self.n_vertices)
+        return torch.cat([self._evaluate_single(x[i]) for i in range(x.size(0))], dim=0)
+
+    def _evaluate_single(self, x):
+        assert x.dim() == 1
         x_h, x_v = _bocs_consistency_mapping(x.numpy())
         interaction_sparsified = x_h * self.interaction[0], x_v * self.interaction[1]
         partition_sparsified = partition(interaction_sparsified, (ISING_GRID_H, ISING_GRID_W))
@@ -151,6 +155,13 @@ class Contamination(object):
         self.init_Z, self.lambdas, self.gammas = generate_contamination_dynamics(random_seed_pair[0])
 
     def evaluate(self, x):
+        if x.dim() == 1:
+            x = x.unsqueeze(0)
+        assert x.size(1) == len(self.n_vertices)
+        return torch.cat([self._evaluate_single(x[i]) for i in range(x.size(0))], dim=0)
+
+    def _evaluate_single(self, x):
+        assert x.dim() == 1
         assert x.numel() == len(self.n_vertices)
         if x.dim() == 2:
             x = x.squeeze(0)
@@ -160,43 +171,13 @@ class Contamination(object):
 
 
 if __name__ == '__main__':
-    pass
-    # from GraphDecompositionBO.test_functions.experiment_configuration import generate_random_seed_aerostruct, generate_random_seed_pair_ising, generate_random_seed_pair_contamination, generate_ising_interaction
+    from GraphDecompositionBO.experiments.random_seed_config import generate_random_seed_pair_ising
 
-    # random_seed_pairs = generate_random_seed_pair_ising()
-    # lamda = 0.00
-    # for case_seed in sorted(random_seed_pairs.keys()):
-    #     init_seed_list = sorted(random_seed_pairs[case_seed])
-    #     for init_seed in init_seed_list:
-    #         print('Ising' + ('-' * 20) + str(case_seed).zfill(4) + ',' + str(init_seed).zfill(4) + ('-' * 20))
-    #         evaluator = Ising1(lamda=lamda, random_seed_pair=(case_seed, init_seed))
-    #         evaluations = []
-    #         for i in range(evaluator.suggested_init.size(0)):
-    #             evaluations.append(evaluator.evaluate(evaluator.suggested_init[i]).item())
-    #         print(['%8.4f' % elm for elm in evaluations])
-
-    # random_seed_pairs = generate_random_seed_pair_contamination()
-    # lamda = 0.00
-    # for case_seed in sorted(random_seed_pairs.keys()):
-    #     init_seed_list = sorted(random_seed_pairs[case_seed])
-    #     for init_seed in init_seed_list:
-    #         print('Contamination  '  + str(case_seed).zfill(4) + ',' + str(init_seed).zfill(4))
-    #         evaluator = Contamination1(lamda=lamda, random_seed_pair=(case_seed, init_seed))
-    #         evaluations = []
-    #         for i in range(evaluator.suggested_init.size(0)):
-    #             evaluations.append(evaluator.evaluate(evaluator.suggested_init[i]).item())
-    #         print(['%8.4f' % elm for elm in evaluations])
-
-    # random_seeds = generate_random_seed_aerostruct()
-    # print(random_seeds)
-    # lamda = 0.00
-    # eval_types = [AeroStruct1]
-    # for random_seed in sorted(random_seeds):
-    #     print(('-' * 20) + str(random_seed).zfill(4) + ('-' * 20))
-    #     for i in range(len(eval_types)):
-    #         evaluator = eval_types[i](lamda=lamda, random_seed=random_seed)
-    #         evaluations = []
-    #         for i in range(evaluator.suggested_init.size(0)):
-    #             evaluations.append(evaluator.evaluate(evaluator.suggested_init[i]).item())
-    #         print(['%8.4f' % elm for elm in evaluations])
-    #         print(min(evaluations))
+    random_seed_config_ = 10
+    random_seed_pair_ = generate_random_seed_pair_ising()
+    case_seed_ = sorted(random_seed_pair_.keys())[int(random_seed_config_ / 5)]
+    init_seed_ = sorted(random_seed_pair_[case_seed_])[int(random_seed_config_ % 5)]
+    objective_ = Ising(random_seed_pair=(case_seed_, init_seed_))
+    objective_.lamda = 0.01
+    print(objective_.suggested_init)
+    print(objective_.evaluate(objective_.suggested_init))
