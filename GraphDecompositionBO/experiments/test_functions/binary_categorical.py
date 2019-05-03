@@ -41,7 +41,26 @@ def partition(interaction, grid_shape):
     return interaction_partition
 
 
-def ising_dense(interaction_original, interaction_sparsified, covariance, partition_original, partition_sparsified):
+def log_partition(interaction, grid_shape):
+    horizontal_interaction, vertical_interaction = interaction
+    n_vars = horizontal_interaction.shape[0] * vertical_interaction.shape[1]
+    spin_cfgs = np.array(list(itertools.product(*([[-1, 1]] * n_vars))))
+    log_interaction_energy_list = []
+    for i in range(spin_cfgs.shape[0]):
+        spin_cfg = spin_cfgs[i].reshape(grid_shape)
+        h_comp = spin_cfg[:, :-1] * horizontal_interaction * spin_cfg[:, 1:] * 2
+        v_comp = spin_cfg[:-1] * vertical_interaction * spin_cfg[1:] * 2
+        log_interaction_energy = np.sum(h_comp) + np.sum(v_comp)
+        log_interaction_energy_list.append(log_interaction_energy)
+
+    log_interaction_energy_list = np.array(log_interaction_energy_list)
+    max_log_interaction_energy = np.max(log_interaction_energy_list)
+    interaction_partition = np.sum(np.exp(log_interaction_energy_list - max_log_interaction_energy))
+
+    return np.log(interaction_partition) + max_log_interaction_energy
+
+
+def ising_dense(interaction_original, interaction_sparsified, covariance, log_partition_original, log_partition_sparsified):
     diff_horizontal = interaction_original[0] - interaction_sparsified[0]
     diff_vertical = interaction_original[1] - interaction_sparsified[1]
 
@@ -56,7 +75,7 @@ def ising_dense(interaction_original, interaction_sparsified, covariance, partit
             elif abs(i_h - j_h) == 1 and i_v == j_v:
                 kld += diff_vertical[min(i_h, j_h), i_v] * covariance[i, j]
 
-    return kld * 2 + np.log(partition_sparsified / partition_original)
+    return kld * 2 + log_partition_sparsified - log_partition_original
 
 
 def _bocs_consistency_mapping(x):
@@ -105,10 +124,10 @@ class Ising(object):
         assert x.dim() == 1
         x_h, x_v = _bocs_consistency_mapping(x.numpy())
         interaction_sparsified = x_h * self.interaction[0], x_v * self.interaction[1]
-        partition_sparsified = partition(interaction_sparsified, (ISING_GRID_H, ISING_GRID_W))
+        log_partition_sparsified = log_partition(interaction_sparsified, (ISING_GRID_H, ISING_GRID_W))
         evaluation = ising_dense(interaction_sparsified=interaction_sparsified, interaction_original=self.interaction,
-                                 covariance=self.covariance, partition_sparsified=partition_sparsified,
-                                 partition_original=self.partition_original)
+                                 covariance=self.covariance, log_partition_sparsified=log_partition_sparsified,
+                                 log_partition_original=np.log(self.partition_original))
         evaluation += self.lamda * float(torch.sum(x))
         return evaluation * x.new_ones((1,)).float()
 
@@ -171,13 +190,8 @@ class Contamination(object):
 
 
 if __name__ == '__main__':
-    from GraphDecompositionBO.experiments.random_seed_config import generate_random_seed_pair_ising
-
-    random_seed_config_ = 10
-    random_seed_pair_ = generate_random_seed_pair_ising()
-    case_seed_ = sorted(random_seed_pair_.keys())[int(random_seed_config_ / 5)]
-    init_seed_ = sorted(random_seed_pair_[case_seed_])[int(random_seed_config_ % 5)]
-    objective_ = Ising(random_seed_pair=(case_seed_, init_seed_))
-    objective_.lamda = 0.01
-    print(objective_.suggested_init)
-    print(objective_.evaluate(objective_.suggested_init))
+    interaction = generate_ising_interaction(ISING_GRID_H, ISING_GRID_W, np.random.randint(0, 10000))
+    interaction = interaction[0].numpy(), interaction[1].numpy()
+    grid_shape = (ISING_GRID_H, ISING_GRID_W)
+    print(np.log(partition(interaction, grid_shape)))
+    print(log_partition(interaction, grid_shape))
