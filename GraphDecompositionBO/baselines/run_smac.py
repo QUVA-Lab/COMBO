@@ -16,9 +16,9 @@ from smac.facade.smac_facade import SMAC
 import torch
 
 from GraphDecompositionBO.experiments.random_seed_config import generate_random_seed_pestcontrol, \
-	generate_random_seed_pair_centroid, generate_random_seed_maxsat
+	generate_random_seed_pair_centroid, generate_random_seed_maxsat, generate_random_seed_pair_ising, \
+	generate_random_seed_pair_contamination
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import ISING_N_EDGES, CONTAMINATION_N_STAGES
-from GraphDecompositionBO.experiments.test_functions.binary_categorical import _bocs_consistency_mapping
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import Ising, Contamination
 from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PESTCONTROL_N_STAGES, CENTROID_GRID, \
 	CENTROID_N_EDGES, CENTROID_N_CHOICE, PESTCONTROL_N_CHOICE
@@ -62,7 +62,7 @@ def ising(n_eval, lamda, random_seed_pair):
 	return optimum
 
 
-def contamination(n_eval, random_seed_pair, lamda=0.01):
+def contamination(n_eval, lamda, random_seed_pair):
 	evaluator = Contamination(random_seed_pair)
 	evaluator.lamda = lamda
 	name_tag = '_'.join(['contamination',  ('%.2E' % lamda), datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")])
@@ -191,9 +191,47 @@ def centroid(n_eval, random_seed_pair):
 	return optimum
 
 
-def multiple_runs(problem, parallel=True):
+def multiple_runs(problem):
 	print('Optimizing %s' % problem)
-	if problem == 'pestcontrol':
+	if problem[:5] == 'ising':
+		n_eval = 170
+		lamda = float(problem.split('_')[1])
+		random_seed_pairs = generate_random_seed_pair_ising()
+		runs = None
+		n_runs = sum([len(elm) for elm in random_seed_pairs.values()])
+		bar = progressbar.ProgressBar(max_value=n_runs)
+		bar_cnt = 0
+		for i in range(len(random_seed_pairs.keys())):
+			case_seed = sorted(random_seed_pairs.keys())[i]
+			for j in range(len(random_seed_pairs[case_seed])):
+				init_seed = sorted(random_seed_pairs[case_seed])[j]
+				optimum = ising(n_eval, lamda, (case_seed, init_seed))
+				bar_cnt += 1
+				bar.update(bar_cnt)
+				if runs is None:
+					runs = optimum.reshape(-1, 1)
+				else:
+					runs = np.hstack([runs, optimum.reshape(-1, 1)])
+	elif problem[:13] == 'contamination':
+		n_eval = 170
+		lamda = float(problem.split('_')[1])
+		random_seed_pairs = generate_random_seed_pair_contamination()
+		runs = None
+		n_runs = sum([len(elm) for elm in random_seed_pairs.values()])
+		bar = progressbar.ProgressBar(max_value=n_runs)
+		bar_cnt = 0
+		for i in range(len(random_seed_pairs.keys())):
+			case_seed = sorted(random_seed_pairs.keys())[i]
+			for j in range(len(random_seed_pairs[case_seed])):
+				init_seed = sorted(random_seed_pairs[case_seed])[j]
+				optimum = contamination(n_eval, lamda, (case_seed, init_seed))
+				bar_cnt += 1
+				bar.update(bar_cnt)
+				if runs is None:
+					runs = optimum.reshape(-1, 1)
+				else:
+					runs = np.hstack([runs, optimum.reshape(-1, 1)])
+	elif problem == 'pestcontrol':
 		n_eval = 320
 		random_seeds = sorted(generate_random_seed_pestcontrol())
 		runs = None
@@ -266,4 +304,5 @@ def evaluations_from_smac(smac):
 if __name__ == '__main__':
 	mean, std = multiple_runs(sys.argv[1])
 	print(np.hstack([mean.reshape(-1, 1), std.reshape(-1, 1)]))
+	torch.polygamma()
 
