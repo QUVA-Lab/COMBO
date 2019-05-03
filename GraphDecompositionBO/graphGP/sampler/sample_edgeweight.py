@@ -80,6 +80,7 @@ def fourier_update(adj_mat, log_beta_i, prefix_id_added, suffix_id_added):
     # D(id_added) - A(id_added) = D(original) - A(original)
     laplacian = torch.diag(torch.sum(adj_id_added, dim=0) + numerical_buffer) - adj_id_added
     fourier_freq_buffer, fourier_basis = torch.symeig(laplacian, eigenvectors=True)
+    fourier_freq_buffer[0] = numerical_buffer  # Ensuring the smallest one is zero for connected graphs
     return (fourier_freq_buffer - numerical_buffer).clamp(min=0), fourier_basis
 
 

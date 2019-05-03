@@ -23,22 +23,7 @@ class Inference(nn.Module):
 		if hyper is not None:
 			self.model.vec_to_param(hyper)
 		self.mean_vec = self.train_y - self.model.mean(self.train_x.float())
-		kernel_mat = self.model.kernel(self.train_x)
-		if torch.isnan(kernel_mat).any():
-			print(kernel_mat)
-			print(torch.exp(self.model.kernel.log_amp))
-			for freq, basis in zip(self.model.kernel.fourier_freq_list, self.model.kernel.fourier_basis_list):
-				if torch.isnan(freq).any():
-					print('frequency')
-					print(freq)
-				if torch.isnan(torch.exp(-freq)).any():
-					print('exp(-freq)')
-					print(torch.exp(-freq))
-				if torch.isnan(basis).any():
-					print('basis')
-					print(basis)
-			raise('Gram has NaN values')
-		self.gram_mat = kernel_mat + torch.diag(self.model.likelihood(self.train_x.float()))
+		self.gram_mat = self.model.kernel(self.train_x) + torch.diag(self.model.likelihood(self.train_x.float()))
 
 	def cholesky_update(self, hyper):
 		self.gram_mat_update(hyper)

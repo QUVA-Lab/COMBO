@@ -52,6 +52,7 @@ def gibbs_partition(model, input_data, output_data, n_vertices, adj_mat_list, lo
 					deg_mat = torch.diag(torch.sum(adj_mat, dim=0))
 					laplacian = deg_mat - adj_mat
 					fourier_freq, fourier_basis = torch.symeig(laplacian, eigenvectors=True)
+					fourier_freq[0] = 0 # Ensuring the smallest one is zero for connected graphs
 					eigen_decompositions[tuple(subset)] = (fourier_freq, fourier_basis, edge_mat)
 				fourier_freq_list.append(fourier_freq)
 				fourier_basis_list.append(fourier_basis)

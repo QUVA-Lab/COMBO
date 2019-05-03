@@ -75,7 +75,7 @@ def log_prior_edgeweight(log_beta_i, dim):
 	# Gamma prior
 	shape = 1.0
 	rate = 1.0 / dim ** 0.5
-	if log_beta_i < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(10000.0)) < log_beta_i:
+	if log_beta_i < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(100.0)) < log_beta_i:
 		return -float('inf')
 	return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * log_beta_i - rate * np.exp(log_beta_i)
 	# Uniform prior
