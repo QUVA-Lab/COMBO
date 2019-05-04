@@ -10,6 +10,8 @@ def experiment_directory():
 		return '/home/coh1/Experiments/GraphDecompositionBO'
 	elif hostname == 'quva01':
 		return '/home/changyongoh/Experiments/GraphDecompositionBO'
+	elif hostname[-16:] == 'lisa.surfsara.nl':
+		return '/home/cyoh/Experiments/GraphDecompositionBO'
 	elif hostname[:4] == 'node':
 		return '/var/scratch/coh/Experiments/GraphDecompositionBO'
 	else:
@@ -21,7 +23,9 @@ def data_directory():
 	if hostname == 'DTA160000':
 		return '/home/coh1/Data'
 	elif hostname == 'quva01':
-		return '/home/changyongoh/Experiments/Data'
+		return '/home/changyongoh/Data'
+	elif hostname[-16:] == 'lisa.surfsara.nl':
+		return '/home/cyoh/Data'
 	elif hostname[:4] == 'node':
 		return '/var/scratch/coh/Data'
 	else:
@@ -34,6 +38,8 @@ def SMAC_exp_dir():
 		return '/home/coh1/Experiments/CombinatorialBO_SMAC'
 	elif hostname == 'quva01':
 		return '/home/changyongoh/Experiments/CombinatorialBO_SMAC'
+	elif hostname[-16:] == 'lisa.surfsara.nl':
+		return '/home/cyoh/Experiments/CombinatorialBO_SMAC'
 	elif hostname[:4] == 'node':
 		return '/var/scratch/coh/Experiments/CombinatorialBO_SMAC'
 	else:
