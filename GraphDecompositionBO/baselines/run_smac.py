@@ -39,7 +39,7 @@ def ising(n_eval, lamda, random_seed_pair):
 	name_tag = '_'.join(['ising',  ('%.2E' % lamda), datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")])
 	cs = ConfigurationSpace()
 	for i in range(ISING_N_EDGES):
-		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(ISING_N_EDGES)], default_value='0')
+		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(2)], default_value='0')
 		cs.add_hyperparameter(car_var)
 
 	init_points_numpy = evaluator.suggested_init.long().numpy()
@@ -68,7 +68,7 @@ def contamination(n_eval, lamda, random_seed_pair):
 	name_tag = '_'.join(['contamination',  ('%.2E' % lamda), datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")])
 	cs = ConfigurationSpace()
 	for i in range(CONTAMINATION_N_STAGES):
-		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(CONTAMINATION_N_STAGES)], default_value='0')
+		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(2)], default_value='0')
 		cs.add_hyperparameter(car_var)
 
 	init_points_numpy = evaluator.suggested_init.long().numpy()
@@ -102,7 +102,7 @@ def maxsat(n_eval, n_variables, random_seed):
 	name_tag = 'maxsat' + str(n_variables) + '_' + datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")
 	cs = ConfigurationSpace()
 	for i in range(n_variables):
-		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(n_variables)], default_value='0')
+		car_var = CategoricalHyperparameter('x' + str(i + 1).zfill(2), [str(elm) for elm in range(2)], default_value='0')
 		cs.add_hyperparameter(car_var)
 	init_points_numpy = evaluator.suggested_init.long().numpy()
 	init_points = []
