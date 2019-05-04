@@ -93,8 +93,8 @@ class Ising(object):
     """
     Ising Sparsification Problem with the simplest graph
     """
-    def __init__(self, random_seed_pair=(None, None)):
-        self.lamda = 0.01
+    def __init__(self, lamda, random_seed_pair=(None, None)):
+        self.lamda = lamda
         self.n_vertices = np.array([2] * ISING_N_EDGES)
         self.suggested_init = torch.empty(0).long()
         self.suggested_init = torch.cat([self.suggested_init, sample_init_points(self.n_vertices, 20 - self.suggested_init.size(0), random_seed_pair[1]).long()], dim=0)
@@ -153,8 +153,8 @@ class Contamination(object):
     """
     Contamination Control Problem with the simplest graph
     """
-    def __init__(self, random_seed_pair=(None, None)):
-        self.lamda = 0.01
+    def __init__(self, lamda, random_seed_pair=(None, None)):
+        self.lamda = lamda
         self.n_vertices = np.array([2] * CONTAMINATION_N_STAGES)
         self.suggested_init = torch.empty(0).long()
         self.suggested_init = torch.cat([self.suggested_init, sample_init_points(self.n_vertices, 20 - self.suggested_init.size(0), random_seed_pair[1])], dim=0)

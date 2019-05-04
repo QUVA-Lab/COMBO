@@ -114,3 +114,5 @@ ENV/
 .mypy_cache/
 
 *.sub
+
+plotting/

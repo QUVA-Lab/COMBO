@@ -131,10 +131,12 @@ if __name__ == '__main__':
     parser_.add_argument('--n_eval', dest='n_eval', type=int, default=1)
     parser_.add_argument('--path', dest='path')
     parser_.add_argument('--objective', dest='objective')
+    parser_.add_argument('--lamda', dest='lamda', type=float, default=None)
     parser_.add_argument('--random_seed_config', dest='random_seed_config', type=int, default=None)
     parser_.add_argument('--no_graph_learning', dest='no_graph_learning', action='store_true', default=False)
     parser_.add_argument('--parallel', dest='parallel', action='store_true', default=False)
     parser_.add_argument('--device', dest='device', type=int, default=None)
+
 
     args_ = parser_.parse_args()
     print(args_)
@@ -156,12 +158,12 @@ if __name__ == '__main__':
         random_seed_pair_ = generate_random_seed_pair_ising()
         case_seed_ = sorted(random_seed_pair_.keys())[int(random_seed_config_ / 5)]
         init_seed_ = sorted(random_seed_pair_[case_seed_])[int(random_seed_config_ % 5)]
-        kwag_['objective'] = Ising(random_seed_pair=(case_seed_, init_seed_))
+        kwag_['objective'] = Ising(lamda=args_.lamda, random_seed_pair=(case_seed_, init_seed_))
     elif objective_ == 'contamination':
         random_seed_pair_ = generate_random_seed_pair_contamination()
         case_seed_ = sorted(random_seed_pair_.keys())[int(random_seed_config_ / 5)]
         init_seed_ = sorted(random_seed_pair_[case_seed_])[int(random_seed_config_ % 5)]
-        kwag_['objective'] = Contamination(random_seed_pair=(case_seed_, init_seed_))
+        kwag_['objective'] = Contamination(lamda=args_.lamda, random_seed_pair=(case_seed_, init_seed_))
     elif objective_ == 'centroid':
         random_seed_pair_ = generate_random_seed_pair_centroid()
         case_seed_ = sorted(random_seed_pair_.keys())[int(random_seed_config_ / 5)]
