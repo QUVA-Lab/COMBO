@@ -15,7 +15,7 @@ def greedy_ascent(x_init, inference_samples, partition_samples, edge_mat_samples
     :param x_init: 1d tensor
     :param inference_samples:
     :param edge_mat_samples:
-    :param n_vertices:
+    :param n_vertices: 1D np.array
     :param acquisition_func:
     :param max_n_ascent:
     :param reference:

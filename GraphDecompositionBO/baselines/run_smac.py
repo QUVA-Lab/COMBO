@@ -139,7 +139,7 @@ def pest_control(n_eval, random_seed):
 
 	def evaluate(x):
 		x_tensor = torch.LongTensor([int(x['x' + str(j + 1).zfill(2)]) for j in range(PESTCONTROL_N_STAGES)])
-		return evaluator.evalute(x_tensor).item()
+		return evaluator.evaluate(x_tensor).item()
 
 	print('Began    at ' + datetime.now().strftime("%H:%M:%S"))
 	scenario = Scenario({"run_obj": "quality", "runcount-limit": n_eval, "cs": cs, "deterministic": "true",

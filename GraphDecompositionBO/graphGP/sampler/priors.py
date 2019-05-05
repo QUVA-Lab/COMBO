@@ -51,10 +51,11 @@ def log_prior_kernelamp(log_amp, output_var, kernel_min, kernel_max):
 	"""
 	if log_amp < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(10000.0)) < log_amp:
 		return -float('inf')
-	log_amp_lower = np.log(output_var / kernel_max)
-	log_amp_upper = np.log(output_var / max(kernel_min, 1e-100))
+	log_amp_lower = np.log(output_var) - np.log(kernel_max)
+	log_amp_upper = np.log(output_var) - np.log(max(kernel_min, 1e-100))
 	log_amp_mid = 0.5 * (log_amp_upper + log_amp_lower)
-	log_amp_std = 0.5 * (log_amp_upper - log_amp_lower) / 2.0
+	log_amp_rad = 0.5 * (log_amp_upper - log_amp_lower)
+	log_amp_std = log_amp_rad / 2.0
 	return -np.log(log_amp_std) - 0.5 * (log_amp - log_amp_mid) ** 2 / log_amp_std ** 2
 	# return
 	# Uniform
@@ -65,24 +66,24 @@ def log_prior_kernelamp(log_amp, output_var, kernel_min, kernel_max):
 	# return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * log_amp - rate * np.exp(log_amp)
 
 
-def log_prior_edgeweight(log_beta_i, dim):
+def log_prior_edgeweight(log_beta_i):
 	"""
 
 	:param log_beta_i: numeric(float), ind-th element of 'log_beta'
 	:param dim:
 	:return:
 	"""
-	# Gamma prior
-	shape = 4.0
-	rate = 4.0
 	if log_beta_i < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(100.0)) < log_beta_i:
 		return -float('inf')
-	return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * log_beta_i - rate * np.exp(log_beta_i)
-	# Uniform prior
-	# if og_beta_i < LOG_LOWER_BND or min(LOG_UPPER_BND, np.log(2.0)) < log_beta_i:
-	# 	return -float('inf')
-	# else:
-	# 	return np.log(1.0 / 2.0)
+	## Gamma prior For sparsity-inducing, shape should be 1
+	## The higher the rate, the more sparsity is induced.
+	# shape = 1.0
+	# rate = 3.0
+	# return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * log_beta_i - rate * np.exp(log_beta_i)
+
+	## Horseshoe prior
+	tau = 1.0
+	return np.log(np.log(1.0 + 2.0 / (np.exp(log_beta_i) / tau) ** 2))
 
 
 def log_prior_partition(sorted_partition, n_vertices):
@@ -91,12 +92,64 @@ def log_prior_partition(sorted_partition, n_vertices):
 	this prior prefers well-spread partition, which is quantified by induced entropy.
 	Density is proportional to the entropy of a unnormalized probability vector consisting of [log(n_vertices in subgraph_i)]_i=1...N
 	:param sorted_partition:
-	:param n_vertices:
+	:param n_vertices: 1D np.array
 	:return:
 	"""
 	if len(sorted_partition) == 1 or compute_group_size(sorted_partition=sorted_partition, n_vertices=n_vertices) > GRAPH_SIZE_LIMIT:
 		return -float('inf')
 	else:
+		max_log = np.sum(np.log(n_vertices))
+		thr_log = np.log(GRAPH_SIZE_LIMIT)
+		n_chunk = int(np.floor(max_log / thr_log))
+		prob_base = np.array([np.log(GRAPH_SIZE_LIMIT) for _ in range(n_chunk)] + [max_log - n_chunk * thr_log])
+		prob_base /= np.sum(prob_base)
+		entropy_base = -np.sum(prob_base * np.log(prob_base))
 		prob_mass = np.array([np.sum(np.log(n_vertices[subset])) for subset in sorted_partition])
 		prob_mass /= np.sum(prob_mass)
-		return np.log(np.sum(-prob_mass * np.log(prob_mass)))
+		entropy_mass = -np.sum(prob_mass * np.log(prob_mass))
+		return np.log(entropy_mass - entropy_base) * 2
+
+
+if __name__ == '__main__':
+	# n_variables_ = 45
+	# n_vertices_ = np.ones((n_variables_, )) * 2
+	# sorted_partition_ = [[m_] for m_ in range(n_variables_)]
+	# print(sorted_partition_)
+	# print(np.exp(log_prior_partition(sorted_partition_, n_vertices_)))
+	# for _ in range(10):
+	# 	cnt_ = 0
+	# 	sorted_partition_ = []
+	# 	while cnt_ < n_variables_:
+	# 		prev_cnt_ = cnt_
+	# 		curr_cnt_ = cnt_ + np.random.randint(1, 5)
+	# 		sorted_partition_.append(list(range(prev_cnt_, min(curr_cnt_, n_variables_))))
+	# 		cnt_ = curr_cnt_
+	# 	print(sorted_partition_)
+	# 	print(np.exp(log_prior_partition(sorted_partition_, n_vertices_)))
+	import matplotlib.pyplot as plt_
+
+	def marginal_(pdf):
+		x = np.linspace(0 + 1e-2, 10 + 1e-4, 100000)
+		y = pdf(x)
+		upper = y[:1]
+		lower = y[-1:]
+		x_grid = x[1:] - x[:-1]
+		return (np.sum(upper * x_grid) + np.sum(lower * x_grid)) / 2.0
+
+	x_plot_ = np.linspace(1e-2, 2, 10000)
+	x_marginal_ = np.linspace(0, 10, 10000)
+	y_ip_ = lambda x: 1.0 / x
+	y_cc_ = lambda x, gamma: 1.0 / (np.pi * gamma * (1.0 + x / gamma) ** 2)
+	y_hs_ = lambda x, tau: (0.5 * np.log(1.0 + 4.0 / (x / tau) ** 2) + np.log(1.0 + 2.0 / (x / tau) ** 2)) / 2.0
+	C_ip_ = marginal_(y_ip_)
+	print(C_ip_)
+
+	plt_.plot(x_plot_, y_ip_(x_plot_) / C_ip_, label='improper')
+	plt_.plot(x_plot_, y_cc_(x_plot_, 1.0), label='cauchy')
+	for tau in [1.0, 2.0, 5.0, 10.0]:
+		C_hs_ = marginal_(lambda x: y_hs_(x, tau))
+		print(C_hs_)
+		plt_.plot(x_plot_, y_hs_(x_plot_, tau) / C_hs_, label='HS %4.1f' % tau, alpha=0.25)
+	plt_.legend()
+	plt_.ylim([0, 0.2])
+	plt_.show()

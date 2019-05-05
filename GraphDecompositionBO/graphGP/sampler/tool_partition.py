@@ -155,14 +155,7 @@ def neighbor_partitions(sorted_partition, ind):
 
 
 def ind_to_perturb(sorted_partition, n_vertices):
-	log_prob_subsets = np.log(np.array([np.sum(np.log(n_vertices[subset])) for subset in sorted_partition]))
-	gumbel_max_rv_subsets = np.argmax(-np.log(-np.log(np.random.uniform(0, 1, log_prob_subsets.shape))) + log_prob_subsets)
-	if len(sorted_partition[gumbel_max_rv_subsets]) == 1:
-		return sorted_partition[gumbel_max_rv_subsets][0]
-	else:
-		log_prob_ind = np.log(np.log(n_vertices[sorted_partition[gumbel_max_rv_subsets]]))
-		gumbel_max_rv_ind = np.argmax(-np.log(-np.log(np.random.uniform(0, 1, log_prob_ind.shape))) + log_prob_ind)
-		return sorted_partition[gumbel_max_rv_subsets][gumbel_max_rv_ind]
+	return np.argmax(-np.log(-np.log(np.random.uniform(0, 1, n_vertices.shape))) + np.log(n_vertices))
 
 
 if __name__ == '__main__':

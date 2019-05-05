@@ -45,10 +45,13 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
 
     if objective is not None:
         exp_dir = experiment_directory()
-        objective_name = '_'.join([objective.__class__.__name__,
-                                   objective.random_seed_info if hasattr(objective, 'random_seed_info') else 'none',
-                                   ('%.1E' % objective.lamda) if hasattr(objective, 'lamda') else '',
-                                   'GOLD' if learn_graph else 'COMBO'])
+        objective_id_list = [objective.__class__.__name__]
+        if hasattr(objective, 'random_seed_info'):
+            objective_id_list.append(objective.random_seed_info)
+        if hasattr(objective, 'lamda'):
+            objective_id_list.append('%.1E' % objective.lamda)
+        objective_id_list.append('GOLD' if learn_graph else 'COMBO')
+        objective_name = '_'.join(objective_id_list)
         model_filename, data_cfg_filaname, logfile_dir = model_data_filenames(exp_dir=exp_dir,
                                                                               objective_name=objective_name)
 

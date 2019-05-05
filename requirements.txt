@@ -1,9 +1,6 @@
-mkl
-matplotlib
-numpy
-progressbar2
+gputil
 psutil
-scipy
 simanneal
+toposort
 torch
 torchvision
