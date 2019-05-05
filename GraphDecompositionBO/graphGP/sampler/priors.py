@@ -107,49 +107,49 @@ def log_prior_partition(sorted_partition, n_vertices):
 		prob_mass = np.array([np.sum(np.log(n_vertices[subset])) for subset in sorted_partition])
 		prob_mass /= np.sum(prob_mass)
 		entropy_mass = -np.sum(prob_mass * np.log(prob_mass))
-		return np.log(entropy_mass - entropy_base) * 2
+		return np.log(entropy_mass - entropy_base) * 5
 
 
 if __name__ == '__main__':
-	# n_variables_ = 45
-	# n_vertices_ = np.ones((n_variables_, )) * 2
-	# sorted_partition_ = [[m_] for m_ in range(n_variables_)]
-	# print(sorted_partition_)
-	# print(np.exp(log_prior_partition(sorted_partition_, n_vertices_)))
-	# for _ in range(10):
-	# 	cnt_ = 0
-	# 	sorted_partition_ = []
-	# 	while cnt_ < n_variables_:
-	# 		prev_cnt_ = cnt_
-	# 		curr_cnt_ = cnt_ + np.random.randint(1, 5)
-	# 		sorted_partition_.append(list(range(prev_cnt_, min(curr_cnt_, n_variables_))))
-	# 		cnt_ = curr_cnt_
-	# 	print(sorted_partition_)
-	# 	print(np.exp(log_prior_partition(sorted_partition_, n_vertices_)))
-	import matplotlib.pyplot as plt_
-
-	def marginal_(pdf):
-		x = np.linspace(0 + 1e-2, 10 + 1e-4, 100000)
-		y = pdf(x)
-		upper = y[:1]
-		lower = y[-1:]
-		x_grid = x[1:] - x[:-1]
-		return (np.sum(upper * x_grid) + np.sum(lower * x_grid)) / 2.0
-
-	x_plot_ = np.linspace(1e-2, 2, 10000)
-	x_marginal_ = np.linspace(0, 10, 10000)
-	y_ip_ = lambda x: 1.0 / x
-	y_cc_ = lambda x, gamma: 1.0 / (np.pi * gamma * (1.0 + x / gamma) ** 2)
-	y_hs_ = lambda x, tau: (0.5 * np.log(1.0 + 4.0 / (x / tau) ** 2) + np.log(1.0 + 2.0 / (x / tau) ** 2)) / 2.0
-	C_ip_ = marginal_(y_ip_)
-	print(C_ip_)
-
-	plt_.plot(x_plot_, y_ip_(x_plot_) / C_ip_, label='improper')
-	plt_.plot(x_plot_, y_cc_(x_plot_, 1.0), label='cauchy')
-	for tau in [1.0, 2.0, 5.0, 10.0]:
-		C_hs_ = marginal_(lambda x: y_hs_(x, tau))
-		print(C_hs_)
-		plt_.plot(x_plot_, y_hs_(x_plot_, tau) / C_hs_, label='HS %4.1f' % tau, alpha=0.25)
-	plt_.legend()
-	plt_.ylim([0, 0.2])
-	plt_.show()
+	n_variables_ = 60
+	n_vertices_ = np.ones((n_variables_, )) * 2
+	sorted_partition_ = [[m_] for m_ in range(n_variables_)]
+	print(sorted_partition_)
+	print(np.exp(log_prior_partition(sorted_partition_, n_vertices_)))
+	for _ in range(10):
+		cnt_ = 0
+		sorted_partition_ = []
+		while cnt_ < n_variables_:
+			prev_cnt_ = cnt_
+			curr_cnt_ = cnt_ + np.random.randint(1, 3)
+			sorted_partition_.append(list(range(prev_cnt_, min(curr_cnt_, n_variables_))))
+			cnt_ = curr_cnt_
+		print(sorted_partition_)
+		print(np.exp(log_prior_partition(sorted_partition_, n_vertices_)))
+	# import matplotlib.pyplot as plt_
+	#
+	# def marginal_(pdf):
+	# 	x = np.linspace(0 + 1e-2, 10 + 1e-4, 100000)
+	# 	y = pdf(x)
+	# 	upper = y[:1]
+	# 	lower = y[-1:]
+	# 	x_grid = x[1:] - x[:-1]
+	# 	return (np.sum(upper * x_grid) + np.sum(lower * x_grid)) / 2.0
+	#
+	# x_plot_ = np.linspace(1e-2, 2, 10000)
+	# x_marginal_ = np.linspace(0, 10, 10000)
+	# y_ip_ = lambda x: 1.0 / x
+	# y_cc_ = lambda x, gamma: 1.0 / (np.pi * gamma * (1.0 + x / gamma) ** 2)
+	# y_hs_ = lambda x, tau: (0.5 * np.log(1.0 + 4.0 / (x / tau) ** 2) + np.log(1.0 + 2.0 / (x / tau) ** 2)) / 2.0
+	# C_ip_ = marginal_(y_ip_)
+	# print(C_ip_)
+	#
+	# plt_.plot(x_plot_, y_ip_(x_plot_) / C_ip_, label='improper')
+	# plt_.plot(x_plot_, y_cc_(x_plot_, 1.0), label='cauchy')
+	# for tau in [1.0, 2.0, 5.0, 10.0]:
+	# 	C_hs_ = marginal_(lambda x: y_hs_(x, tau))
+	# 	print(C_hs_)
+	# 	plt_.plot(x_plot_, y_hs_(x_plot_, tau) / C_hs_, label='HS %4.1f' % tau, alpha=0.25)
+	# plt_.legend()
+	# plt_.ylim([0, 0.2])
+	# plt_.show()
