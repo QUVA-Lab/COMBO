@@ -85,6 +85,10 @@ def log_prior_edgeweight(log_beta_i):
 	tau = 1.0
 	return np.log(np.log(1.0 + 2.0 / (np.exp(log_beta_i) / tau) ** 2))
 
+	## Laplace prior
+	scale = 0.5
+	return -np.exp(log_beta_i) / scale
+
 
 def log_prior_partition(sorted_partition, n_vertices):
 	"""
