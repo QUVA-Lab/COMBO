@@ -63,8 +63,7 @@ def ising(n_eval, lamda, random_seed_pair):
 
 
 def contamination(n_eval, lamda, random_seed_pair):
-	evaluator = Contamination(random_seed_pair)
-	evaluator.lamda = lamda
+	evaluator = Contamination(lamda, random_seed_pair)
 	name_tag = '_'.join(['contamination',  ('%.2E' % lamda), datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")])
 	cs = ConfigurationSpace()
 	for i in range(CONTAMINATION_N_STAGES):

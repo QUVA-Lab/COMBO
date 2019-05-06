@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from GraphDecompositionBO.graphGP.inference.inference import Inference
-from GraphDecompositionBO.graphGP.sampler.tool_partition import group_input, strong_product, neighbor_partitions
+from GraphDecompositionBO.graphGP.sampler.tool_partition import group_input, direct_porduct, neighbor_partitions
 from GraphDecompositionBO.graphGP.sampler.priors import log_prior_partition
 
 
@@ -47,7 +47,7 @@ def gibbs_partition(model, input_data, output_data, n_vertices, adj_mat_list, lo
 				try:
 					fourier_freq, fourier_basis, edge_mat = eigen_decompositions[tuple(subset)]
 				except KeyError:
-					adj_mat = strong_product(adj_mat_list=adj_mat_list, beta=torch.exp(log_beta), subset=subset)
+					adj_mat = direct_porduct(adj_mat_list=adj_mat_list, beta=torch.exp(log_beta), subset=subset)
 					edge_mat = (adj_mat > 0).float()
 					deg_mat = torch.diag(torch.sum(adj_mat, dim=0))
 					laplacian = deg_mat - adj_mat
@@ -132,7 +132,7 @@ if __name__ == '__main__':
 	fourier_freq_list_ = []
 	fourier_basis_list_ = []
 	for subset_ in sorted_partition_:
-		adj_mat_ = strong_product(adj_mat_list=adj_mat_list_, beta=torch.exp(log_beta_), subset=subset_)
+		adj_mat_ = direct_porduct(adj_mat_list=adj_mat_list_, beta=torch.exp(log_beta_), subset=subset_)
 		deg_mat_ = torch.diag(torch.sum(adj_mat_, dim=0))
 		laplacian_ = deg_mat_ - adj_mat_
 		fourier_freq_, fourier_basis_ = torch.symeig(laplacian_, eigenvectors=True)

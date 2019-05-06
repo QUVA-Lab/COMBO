@@ -116,7 +116,7 @@ def strong_product(adj_mat_list, beta, subset):
 	each subgraph has the same edge-weight within the graph
 	:param adj_mat_list: list of 2D tensors or adjacency matrices
 	:param beta : 1D tensor, len(beta) == len(adj_mat_list)
-	:param sorted_partition: list of subsets, elements in each subset are ordered, subsets are ordered by their smallest elements
+	:param subset: list of subsets, elements in each subset are ordered, subsets are ordered by their smallest elements
 	:return:
 	"""
 	elm = subset[0]
@@ -127,6 +127,24 @@ def strong_product(adj_mat_list, beta, subset):
 		mat2 = beta[elm] * adj_mat_list[elm] + torch.diag(adj_mat_list[elm].new_ones(adj_mat_list[elm].size(0)))
 		grouped_adjacency_id_added = kronecker(mat1, mat2)
 	return grouped_adjacency_id_added - torch.diag(grouped_adjacency_id_added.new_ones(grouped_adjacency_id_added.size(0)))
+
+
+def direct_porduct(adj_mat_list, beta, subset):
+	"""
+	Adjacency matrix of direct product
+	:param adj_mat_list: list of 2D tensors or adjacency matrices
+	:param beta: 1D tensor, len(beta) == len(adj_mat_list)
+	:param subset: list of subsets, elements in each subset are ordered, subsets are ordered by their smallest elements
+	:return:
+	"""
+	elm = subset[0]
+	grouped_adjacency = beta[elm] * adj_mat_list[elm]
+	for ind in range(1, len(subset)):
+		elm = subset[ind]
+		mat1 = grouped_adjacency
+		mat2 = beta[elm] * adj_mat_list[elm]
+		grouped_adjacency = kronecker(mat1, mat2)
+	return grouped_adjacency
 
 
 def neighbor_partitions(sorted_partition, ind):

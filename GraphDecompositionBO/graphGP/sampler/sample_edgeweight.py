@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from GraphDecompositionBO.graphGP.inference.inference import Inference
-from GraphDecompositionBO.graphGP.sampler.tool_partition import strong_product, kronecker, group_input
+from GraphDecompositionBO.graphGP.sampler.tool_partition import direct_porduct, kronecker, group_input
 from GraphDecompositionBO.graphGP.sampler.tool_slice_sampling import univariate_slice_sampling
 from GraphDecompositionBO.graphGP.sampler.priors import log_prior_edgeweight
 
@@ -30,12 +30,12 @@ def slice_edgeweight(model, input_data, output_data, n_vertices, adj_mat_list, l
     n_pre = updated_subset.index(ind)
     n_suf = len(updated_subset) - n_pre - 1
     if n_pre > 0:
-        prefix = strong_product(adj_mat_list=adj_mat_list, beta=torch.exp(log_beta), subset=updated_subset[:n_pre]) if n_pre > 1 else adj_mat_list[updated_subset[0]]
+        prefix = direct_porduct(adj_mat_list=adj_mat_list, beta=torch.exp(log_beta), subset=updated_subset[:n_pre]) if n_pre > 1 else adj_mat_list[updated_subset[0]]
         prefix_id_added = prefix + torch.diag(prefix.new_ones(prefix.size(0)))
     else:
         prefix_id_added = None
     if n_suf > 0:
-        suffix = strong_product(adj_mat_list=adj_mat_list, beta=torch.exp(log_beta), subset=updated_subset[-n_suf:]) if n_suf > 1 else adj_mat_list[updated_subset[-1]]
+        suffix = direct_porduct(adj_mat_list=adj_mat_list, beta=torch.exp(log_beta), subset=updated_subset[-n_suf:]) if n_suf > 1 else adj_mat_list[updated_subset[-1]]
         suffix_id_added = suffix + torch.diag(suffix.new_ones(suffix.size(0)))
     else:
         suffix_id_added = None
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     fourier_freq_list_ = []
     fourier_basis_list_ = []
     for subset_ in sorted_partition_:
-        adj_mat_ = strong_product(adj_mat_list=adj_mat_list_, beta=torch.exp(log_beta_), subset=subset_)
+        adj_mat_ = direct_porduct(adj_mat_list=adj_mat_list_, beta=torch.exp(log_beta_), subset=subset_)
         deg_mat_ = torch.diag(torch.sum(adj_mat_, dim=0))
         laplacian_ = deg_mat_ - adj_mat_
         fourier_freq_, fourier_basis_ = torch.symeig(laplacian_, eigenvectors=True)

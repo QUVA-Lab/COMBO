@@ -6,7 +6,7 @@ import numpy as np
 from GraphDecompositionBO.graphGP.sampler.sample_hyper import slice_hyper
 from GraphDecompositionBO.graphGP.sampler.sample_edgeweight import slice_edgeweight
 from GraphDecompositionBO.graphGP.sampler.sample_partition import gibbs_partition
-from GraphDecompositionBO.graphGP.sampler.tool_partition import ind_to_perturb, strong_product
+from GraphDecompositionBO.graphGP.sampler.tool_partition import ind_to_perturb, direct_porduct
 from GraphDecompositionBO.config import PROGRESS_BAR_LEN
 
 
@@ -38,7 +38,7 @@ def posterior_sampling(model, input_data, output_data, n_vertices, adj_mat_list,
 	log_beta_sample = log_beta
 	fourier_freq_list = model.kernel.fourier_freq_list
 	fourier_basis_list = model.kernel.fourier_basis_list
-	edge_mat_list = [strong_product(adj_mat_list, input_data.new_ones(len(adj_mat_list)), subset) for subset in
+	edge_mat_list = [direct_porduct(adj_mat_list, input_data.new_ones(len(adj_mat_list)), subset) for subset in
 	                 sorted_partition]
 
 	n_sample_total = n_sample * n_thin + n_burn
