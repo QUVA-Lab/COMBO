@@ -102,16 +102,17 @@ def log_prior_partition(sorted_partition, n_vertices):
 	if len(sorted_partition) == 1 or compute_group_size(sorted_partition=sorted_partition, n_vertices=n_vertices) > GRAPH_SIZE_LIMIT:
 		return -float('inf')
 	else:
-		max_log = np.sum(np.log(n_vertices))
-		thr_log = np.log(GRAPH_SIZE_LIMIT)
-		n_chunk = int(np.floor(max_log / thr_log))
-		prob_base = np.array([np.log(GRAPH_SIZE_LIMIT) for _ in range(n_chunk)] + [max_log - n_chunk * thr_log])
-		prob_base /= np.sum(prob_base)
-		entropy_base = -np.sum(prob_base * np.log(prob_base))
 		prob_mass = np.array([np.sum(np.log(n_vertices[subset])) for subset in sorted_partition])
 		prob_mass /= np.sum(prob_mass)
 		entropy_mass = -np.sum(prob_mass * np.log(prob_mass))
-		return np.log(entropy_mass - entropy_base) * 5
+		# max_log = np.sum(np.log(n_vertices))
+		# thr_log = np.log(GRAPH_SIZE_LIMIT)
+		# n_chunk = int(np.floor(max_log / thr_log))
+		# prob_base = np.array([np.log(GRAPH_SIZE_LIMIT) for _ in range(n_chunk)] + [max_log - n_chunk * thr_log])
+		# prob_base /= np.sum(prob_base)
+		# entropy_base = -np.sum(prob_base * np.log(prob_base))
+		# return np.log(entropy_mass - entropy_base) * 5
+		return np.log(entropy_mass) * 5
 
 
 if __name__ == '__main__':
