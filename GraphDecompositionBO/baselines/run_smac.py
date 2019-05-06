@@ -213,7 +213,7 @@ def multiple_runs(problem):
 				else:
 					runs = np.hstack([runs, optimum.reshape(-1, 1)])
 	elif problem[:13] == 'contamination':
-		n_eval = 170
+		n_eval = 270
 		lamda = float(problem.split('_')[1])
 		random_seed_pairs = generate_random_seed_pair_contamination()
 		runs = None
@@ -244,7 +244,7 @@ def multiple_runs(problem):
 			else:
 				runs = np.hstack([runs, optimum.reshape(-1, 1)])
 	elif problem == 'centroid':
-		n_eval = 200
+		n_eval = 220
 		random_seed_pairs = generate_random_seed_pair_centroid()
 		runs = None
 		n_runs = sum([len(elm) for elm in random_seed_pairs.values()])
