@@ -9,8 +9,8 @@ class DiffusionKernel(GraphKernel):
 	Usually Graph Kernel means a kernel between graphs, here this kernel is a kernel between vertices on a graph
 	Edge scales are not included in the module, instead edge weights of each subgraphs is used to calculate frequencies (fourier_freq)
 	"""
-	def __init__(self, fourier_freq_list, fourier_basis_list):
-		super(DiffusionKernel, self).__init__(fourier_freq_list, fourier_basis_list)
+	def __init__(self, grouped_log_beta, fourier_freq_list, fourier_basis_list):
+		super(DiffusionKernel, self).__init__(grouped_log_beta, fourier_freq_list, fourier_basis_list)
 
 	def forward(self, x1, x2=None, diagonal=False):
 		"""
@@ -30,12 +30,13 @@ class DiffusionKernel(GraphKernel):
 
 		full_gram = 1
 		for i in range(len(self.fourier_freq_list)):
+			beta = torch.exp(self.grouped_log_beta[i])
 			fourier_freq = self.fourier_freq_list[i]
 			fourier_basis = self.fourier_basis_list[i]
 
 			subvec1 = fourier_basis[x1[:, i]]
 			subvec2 = fourier_basis[x2[:, i]]
-			freq_transform = torch.exp(-fourier_freq)
+			freq_transform = torch.exp(-beta * fourier_freq)
 
 			if diagonal:
 				factor_gram = torch.sum(subvec1 * freq_transform.unsqueeze(0) * subvec2, dim=1, keepdim=True)

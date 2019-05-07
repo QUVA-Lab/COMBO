@@ -36,7 +36,7 @@ def acquisition_expectation(x, inference_samples, partition_samples, n_vertices,
     return torch.stack(acquisition_sample_list, 1).sum(1, keepdim=True)
 
 
-def inference_sampling(input_data, output_data, n_vertices, hyper_samples, partition_samples,
+def inference_sampling(input_data, output_data, n_vertices, hyper_samples, log_beta_samples, partition_samples,
                        freq_samples, basis_samples):
     """
 
@@ -44,6 +44,7 @@ def inference_sampling(input_data, output_data, n_vertices, hyper_samples, parti
     :param output_data:
     :param n_vertices:
     :param hyper_samples:
+    :param log_beta_samples:
     :param partition_samples:
     :param freq_samples:
     :param basis_samples:
@@ -51,7 +52,9 @@ def inference_sampling(input_data, output_data, n_vertices, hyper_samples, parti
     """
     inference_samples = []
     for s in range(len(hyper_samples)):
-        kernel = DiffusionKernel(fourier_freq_list=freq_samples[s], fourier_basis_list=basis_samples[s])
+        grouped_log_beta = torch.stack([torch.sum(log_beta_samples[s][subset]) for subset in partition_samples[s]])
+        kernel = DiffusionKernel(grouped_log_beta=grouped_log_beta,
+                                 fourier_freq_list=freq_samples[s], fourier_basis_list=basis_samples[s])
         model = GPRegression(kernel=kernel)
         model.vec_to_param(hyper_samples[s])
         grouped_input_data = group_input(input_data=input_data, sorted_partition=partition_samples[s],

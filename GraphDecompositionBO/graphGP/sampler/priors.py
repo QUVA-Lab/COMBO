@@ -12,9 +12,6 @@ STABLE_MEAN_RNG = 1.0
 GRAPH_SIZE_LIMIT = 1024 + 2
 
 
-# TODO define a prior prior for (scalar) log_beta
-
-
 def log_prior_constmean(constmean, output_min, output_max):
 	"""
 	:param constmean: numeric(float)
@@ -82,12 +79,12 @@ def log_prior_edgeweight(log_beta_i):
 	# return shape * np.log(rate) - gammaln(shape) + (shape - 1.0) * log_beta_i - rate * np.exp(log_beta_i)
 
 	## Horseshoe prior
-	# tau = 1.0
-	# return np.log(np.log(1.0 + 2.0 / (np.exp(log_beta_i) / tau) ** 2))
+	tau = 5.0
+	return np.log(np.log(1.0 + 2.0 / (np.exp(log_beta_i) / tau) ** 2))
 
 	## Laplace prior
-	scale = 0.5
-	return -np.exp(log_beta_i) / scale
+	# scale = 0.5
+	# return -np.exp(log_beta_i) / scale
 
 
 def log_prior_partition(sorted_partition, n_vertices):
@@ -105,14 +102,14 @@ def log_prior_partition(sorted_partition, n_vertices):
 		prob_mass = np.array([np.sum(np.log(n_vertices[subset])) for subset in sorted_partition])
 		prob_mass /= np.sum(prob_mass)
 		entropy_mass = -np.sum(prob_mass * np.log(prob_mass))
-		# max_log = np.sum(np.log(n_vertices))
-		# thr_log = np.log(GRAPH_SIZE_LIMIT)
-		# n_chunk = int(np.floor(max_log / thr_log))
-		# prob_base = np.array([np.log(GRAPH_SIZE_LIMIT) for _ in range(n_chunk)] + [max_log - n_chunk * thr_log])
-		# prob_base /= np.sum(prob_base)
-		# entropy_base = -np.sum(prob_base * np.log(prob_base))
-		# return np.log(entropy_mass - entropy_base) * 5
-		return np.log(entropy_mass) * 5
+		max_log = np.sum(np.log(n_vertices))
+		thr_log = np.log(GRAPH_SIZE_LIMIT)
+		n_chunk = int(np.floor(max_log / thr_log))
+		prob_base = np.array([np.log(GRAPH_SIZE_LIMIT) for _ in range(n_chunk)] + [max_log - n_chunk * thr_log])
+		prob_base /= np.sum(prob_base)
+		entropy_base = -np.sum(prob_base * np.log(prob_base))
+		return np.log(entropy_mass - entropy_base) * 5
+		# return np.log(entropy_mass) * 5
 
 
 if __name__ == '__main__':

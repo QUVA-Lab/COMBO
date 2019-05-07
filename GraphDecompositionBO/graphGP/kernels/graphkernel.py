@@ -5,9 +5,10 @@ from GraphDecompositionBO.graphGP.modules.gp_modules import GPModule
 
 class GraphKernel(GPModule):
 
-	def __init__(self, fourier_freq_list, fourier_basis_list):
+	def __init__(self, grouped_log_beta, fourier_freq_list, fourier_basis_list):
 		super(GraphKernel, self).__init__()
 		self.log_amp = torch.FloatTensor(1)
+		self.grouped_log_beta = grouped_log_beta
 		self.fourier_freq_list = fourier_freq_list
 		self.fourier_basis_list = fourier_basis_list
 

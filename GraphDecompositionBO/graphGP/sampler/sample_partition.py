@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from GraphDecompositionBO.graphGP.inference.inference import Inference
-from GraphDecompositionBO.graphGP.sampler.tool_partition import group_input, direct_porduct, neighbor_partitions
+from GraphDecompositionBO.graphGP.sampler.tool_partition import group_input, direct_product, neighbor_partitions
 from GraphDecompositionBO.graphGP.sampler.priors import log_prior_partition
 
 
@@ -21,15 +21,12 @@ def gibbs_partition(model, input_data, output_data, n_vertices, adj_mat_list, lo
 	:param sorted_partition: Partition of {0, ..., K-1}, list of subsets(list)
 	:param fourier_freq_list: frequencies for subsets in sorted_partition
 	:param fourier_basis_list: basis for subsets in sorted_partition
+	:param edge_mat_list:
 	:param ind: the index of the variable to be relocated in the sorted_partition
 	:return:
 	"""
 	candidate_sorted_partitions = neighbor_partitions(sorted_partition, ind)
 	unnormalized_log_posterior = []
-	# TODO : eigen_decompositions itself can be given if all betas are sampled first and all partitions are sampled afterward
-	# TODO : if beta and partition are sampled alternatively, but still passing eigen_decomposition may be passed with some tuning.
-	#        As long as subset does not contain ind, it is reusable.
-	#        check below try and except, in which checking that ind belongs a subset should be checked
 	eigen_decompositions = {}
 	for s in range(len(sorted_partition)):
 		eigen_decompositions[tuple(sorted_partition[s])] = (fourier_freq_list[s], fourier_basis_list[s], edge_mat_list[s])
@@ -39,26 +36,30 @@ def gibbs_partition(model, input_data, output_data, n_vertices, adj_mat_list, lo
 		if np.isinf(log_prior):
 			unnormalized_log_posterior.append(log_prior)
 		else:
+			n_subsets = len(cand_sorted_partition)
 			fourier_freq_list = []
 			fourier_basis_list = []
 			edge_mat_list = []
-			for s in range(len(cand_sorted_partition)):
+			grouped_log_beta = torch.zeros(n_subsets)
+			for s in range(n_subsets):
 				subset = cand_sorted_partition[s]
 				try:
 					fourier_freq, fourier_basis, edge_mat = eigen_decompositions[tuple(subset)]
 				except KeyError:
-					adj_mat = direct_porduct(adj_mat_list=adj_mat_list, beta=torch.exp(log_beta), subset=subset)
+					adj_mat = direct_product(adj_mat_list=adj_mat_list, subset=subset)
 					edge_mat = (adj_mat > 0).float()
 					deg_mat = torch.diag(torch.sum(adj_mat, dim=0))
 					laplacian = deg_mat - adj_mat
 					fourier_freq, fourier_basis = torch.symeig(laplacian, eigenvectors=True)
 					fourier_freq[0] = 0 # Ensuring the smallest one is zero for connected graphs
 					eigen_decompositions[tuple(subset)] = (fourier_freq, fourier_basis, edge_mat)
+				grouped_log_beta[s] = torch.sum(log_beta[subset]).item()
 				fourier_freq_list.append(fourier_freq)
 				fourier_basis_list.append(fourier_basis)
 				edge_mat_list.append(edge_mat)
 			grouped_input_data = group_input(input_data=input_data, sorted_partition=cand_sorted_partition, n_vertices=n_vertices)
 			inference.train_x = grouped_input_data
+			model.kernel.grouped_log_beta = grouped_log_beta.clone()
 			model.kernel.fourier_freq_list = fourier_freq_list
 			model.kernel.fourier_basis_list = fourier_basis_list
 			log_likelihood = -inference.negative_log_likelihood(hyper=model.param_to_vec())
@@ -132,7 +133,7 @@ if __name__ == '__main__':
 	fourier_freq_list_ = []
 	fourier_basis_list_ = []
 	for subset_ in sorted_partition_:
-		adj_mat_ = direct_porduct(adj_mat_list=adj_mat_list_, beta=torch.exp(log_beta_), subset=subset_)
+		adj_mat_ = direct_product(adj_mat_list=adj_mat_list_, subset=subset_)
 		deg_mat_ = torch.diag(torch.sum(adj_mat_, dim=0))
 		laplacian_ = deg_mat_ - adj_mat_
 		fourier_freq_, fourier_basis_ = torch.symeig(laplacian_, eigenvectors=True)

@@ -57,12 +57,14 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
 
         n_vertices = objective.n_vertices
         adj_mat_list = objective.adjacency_mat
+        grouped_log_beta = torch.ones(len(objective.fourier_freq))
         fourier_freq_list = objective.fourier_freq
         fourier_basis_list = objective.fourier_basis
         suggested_init = objective.suggested_init  # suggested_init should be 2d tensor
         n_init = suggested_init.size(0)
 
-        kernel = DiffusionKernel(fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list)
+        kernel = DiffusionKernel(grouped_log_beta=grouped_log_beta,
+                                 fourier_freq_list=fourier_freq_list, fourier_basis_list=fourier_basis_list)
         surrogate_model = GPRegression(kernel=kernel)
 
         eval_inputs = suggested_init
@@ -104,7 +106,8 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
 
         x_opt = eval_inputs[torch.argmin(eval_outputs)]
         inference_samples = inference_sampling(eval_inputs, eval_outputs, n_vertices,
-                                               hyper_samples, partition_samples, freq_samples, basis_samples)
+                                               hyper_samples, log_beta_samples, partition_samples,
+                                               freq_samples, basis_samples)
         suggestion = next_evaluation(x_opt, inference_samples, partition_samples, edge_mat_samples,
                                      n_vertices, acquisition_func, reference, parallel)
         next_eval, pred_mean, pred_std, pred_var = suggestion
