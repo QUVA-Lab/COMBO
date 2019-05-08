@@ -51,7 +51,7 @@ class NASBinary(object):
 
 		self.suggested_init = init_architectures()
 		dummy_input = next(most_complex_model.parameters()).new_ones(1, self.n_ch_in, self.h_in, self.w_in)
-		self.max_flops = count_ops(most_complex_model, )
+		self.max_flops = count_ops(most_complex_model, dummy_input)
 
 		self.adjacency_mat = []
 		self.fourier_freq = []
