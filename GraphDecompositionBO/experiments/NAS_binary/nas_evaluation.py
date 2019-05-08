@@ -127,16 +127,16 @@ if __name__ == '__main__':
 	                     n_ch_in=n_ch_in_, h_in=h_in_, w_in=w_in_, n_ch_base=n_ch_base_)
 	flops_ = count_ops(model_, torch.ones(1, n_ch_in_, h_in_, w_in_))
 
+	fmt_str = 'eval_acc:%.4f flops:%d'
 	if adj_mat_ is None:
-		print('eval_acc:%.4f flops:%d' % (0.1, flops_))
-		exit(0)
+		print(fmt_str % (0.1, flops_))
+	else:
+		if data_type_ == 'MNIST':
+			train_loader_, valid_loader_, _ = load_mnist(batch_size=100, shuffle=True, random_seed=0)
+		elif data_type_ == 'FashionMNIST':
+			train_loader_, valid_loader_, _ = load_fashionmnist(batch_size=100, shuffle=True, random_seed=0)
+		elif data_type_ == 'CIFAR10':
+			train_loader_, valid_loader_, _ = load_cifar10(batch_size=100, shuffle=True, random_seed=0)
 
-	if data_type_ == 'MNIST':
-		train_loader_, valid_loader_, _ = load_mnist(batch_size=100, shuffle=True, random_seed=0)
-	elif data_type_ == 'FashionMNIST':
-		train_loader_, valid_loader_, _ = load_fashionmnist(batch_size=100, shuffle=True, random_seed=0)
-	elif data_type_ == 'CIFAR10':
-		train_loader_, valid_loader_, _ = load_cifar10(batch_size=100, shuffle=True, random_seed=0)
-
-	eval_acc_ = train(model_, n_epochs_, train_loader_, valid_loader_, device_, display=False)
-	print('eval_acc:%.4f flops:%d' % (eval_acc_, flops_))
+		eval_acc_ = train(model_, n_epochs_, train_loader_, valid_loader_, device_, display=False)
+		print(fmt_str % (eval_acc_, flops_))

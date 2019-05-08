@@ -66,16 +66,19 @@ class NASBinary(object):
 	def evaluate(self, x):
 		if x.dim() == 1:
 			x = x.unsqueeze(0)
+		x = x.int()
 		return torch.cat([self._evaluate_single(x[i]) for i in range(x.size(0))], dim=0)
 
 	def _evaluate_single(self, x):
 		assert x.numel() == self.n_variables
 		assert x.dim() == 1
 		command = self._generate_cmd(x)
+		start_time = time.time()
 		processes = [subprocess.Popen(command, stdout=subprocess.PIPE) for _ in range(self.n_repeat)]
 		for p in processes:
 			p.wait()
 		stdout_read_list = [p.stdout.read() for p in processes]
+		print(time.strftime('Time for training : %H:%M:%S', time.gmtime(time.time() - start_time)))
 		results = [self._parse_stdout(stdout_read.decode('ascii').split('\n')[2]) for stdout_read in stdout_read_list]
 		eval_acc, flops = zip(*[(elm['eval_acc'], elm['flops']) for elm in results])
 		print(' '.join(['%6.4f' % (1.0 - elm) for elm in eval_acc]))
@@ -91,7 +94,7 @@ class NASBinary(object):
 	def _generate_cmd(self, x):
 		cmd_list = ['python', os.path.join(os.path.split(__file__)[0], 'nas_evaluation.py')]
 		cmd_list += ['--data_type',  self.data_type]
-		cmd_list += ['--net_config', ''.join([str(x[i].item()) for i in range(self.n_variables)])]
+		cmd_list += ['--net_config', ''.join([str(int(x[i].item())) for i in range(self.n_variables)])]
 		cmd_list += ['--n_nodes', str(self.n_nodes)]
 		cmd_list += ['--n_epochs', str(self.n_epochs)]
 		cmd_list += ['--n_ch_in', str(self.n_ch_in)]

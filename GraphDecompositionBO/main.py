@@ -24,7 +24,7 @@ from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSA
 from GraphDecompositionBO.experiments.NAS_binary.nas_binary import NASBinary
 
 
-def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True, **kwargs):
+def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True, store_data=False, **kwargs):
     """
 
     :param objective:
@@ -124,8 +124,8 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
         pred_std_list.append(pred_std.item())
         pred_var_list.append(pred_var.item())
 
-        displaying_and_logging(logfile_dir, eval_inputs, eval_outputs,
-                               pred_mean_list, pred_std_list, pred_var_list, time_list, elapse_list)
+        displaying_and_logging(logfile_dir, eval_inputs, eval_outputs, pred_mean_list, pred_std_list, pred_var_list,
+                               time_list, elapse_list, store_data)
         print('Optimizing %s with regularization %.2E up to %4d visualization random seed : %s'
               % (objective.__class__.__name__, objective.lamda if hasattr(objective, 'lamda') else 0, n_eval,
                  objective.random_seed_info if hasattr(objective, 'random_seed_info') else 'none'))
@@ -189,6 +189,7 @@ if __name__ == '__main__':
         kwag_['objective'] = MaxSAT60(random_seed=random_seed_)
     elif objective_ == 'nasbinary':
         kwag_['objective'] = NASBinary(data_type='FashionMNIST', device=args_.device)
+        kwag_['store_data'] = True
     else:
         raise NotImplementedError
     GOLD(**kwag_)

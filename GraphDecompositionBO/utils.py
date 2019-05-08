@@ -43,7 +43,7 @@ def save_model_data(model, model_filename, cfg_data, cfg_data_filename):
 
 
 def displaying_and_logging(logfile_dir, eval_inputs, eval_outputs, pred_mean_list, pred_std_list, pred_var_list,
-                           time_list, elapse_list):
+                           time_list, elapse_list, store_data=False):
 	logfile = open(os.path.join(logfile_dir, str(eval_inputs.size(0)).zfill(4) + '.out'), 'w')
 	for i in range(eval_inputs.size(0)):
 		min_val, min_ind = torch.min(eval_outputs[:i + 1], 0)
@@ -57,3 +57,6 @@ def displaying_and_logging(logfile_dir, eval_inputs, eval_outputs, pred_mean_lis
 		print(time_str + data_str + min_str)
 		logfile.writelines(time_str + data_str + min_str + '\n')
 	logfile.close()
+	if store_data:
+		pklfilename = os.path.join(logfile_dir, str(eval_inputs.size(0)).zfill(4) + '.pkl')
+		torch.save({'inputs': eval_inputs, 'outputs': eval_outputs}, pklfilename)
