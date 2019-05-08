@@ -85,7 +85,7 @@ class NASBinary(object):
 		eval_acc_mean, flops = np.mean(eval_acc), np.mean(flops)
 		eval_err_mean = 1.0 - eval_acc_mean
 		eval_std = np.std(eval_acc)
-		flop_ratio = float(flops) / self.max_flops
+		flop_ratio = float(flops) / self.max_flops if flops >= 0 else 1.0
 		const = 0.02
 		eval = eval_err_mean + const * flop_ratio
 		print('Err:%5.2f%% FLOPs:%6.4f(%4.2f)' % (eval_err_mean * 100, flop_ratio, const))
