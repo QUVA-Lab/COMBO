@@ -137,7 +137,7 @@ if __name__ == '__main__':
 		elif data_type_ == 'CIFAR10':
 			train_loader_, valid_loader_, _ = load_cifar10(batch_size=100, shuffle=True, random_seed=0)
 		eval_acc_ = train(model_, n_epochs_, train_loader_, valid_loader_, device_, display=False)
-		dummy_input_ = next(model_.parameters()).ones_like(1, n_ch_in_, h_in_, w_in_)
+		dummy_input_ = next(model_.parameters()).data.ones_like(1, n_ch_in_, h_in_, w_in_)
 		flops_ = count_ops(model_, dummy_input_)
 
 	print('eval_acc:%.4f flops:%d' % (eval_acc_, flops_))
