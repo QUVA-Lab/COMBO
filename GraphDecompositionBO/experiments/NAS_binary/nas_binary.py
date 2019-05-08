@@ -80,7 +80,7 @@ class NASBinary(object):
 			p.wait()
 		stdout_read_list = [p.stdout.read() for p in processes]
 		for elm in stdout_read_list:
-			print(elm.split('\n'))
+			print(elm.decode('ascii').split('\n'))
 		print(time.strftime('Time for training : %H:%M:%S', time.gmtime(time.time() - start_time)))
 		results = [self._parse_stdout(stdout_read.decode('ascii').split('\n')[-2]) for stdout_read in stdout_read_list]
 		eval_acc, flops = zip(*[(elm['eval_acc'], elm['flops']) for elm in results])
@@ -118,4 +118,3 @@ if __name__ == '__main__':
 	eval_list_ = []
 	for _ in range(1):
 		eval_list_.append(nas_binary_.evaluate(x_).item())
-	
