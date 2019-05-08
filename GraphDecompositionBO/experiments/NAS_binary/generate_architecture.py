@@ -3,8 +3,6 @@ import numpy as np
 
 import torch.nn as nn
 
-from GraphDecompositionBO.experiments.NAS_binary.config_cifar10 import IN_H, IN_W
-
 
 class NodeConv(nn.Module):
     def __init__(self, n_channels):
@@ -136,15 +134,17 @@ class NASBinaryCell(nn.Module):
 
 
 class NASBinaryCNN(nn.Module):
-    def __init__(self, node_type, adj_mat, n_ch_base):
+    def __init__(self, data_type, node_type, adj_mat, n_ch_in, h_in, w_in, n_ch_base):
         """
         With a valid and reduced network topology (adj_mat), a cell is constructed
         :param node_type: 1d np.array node_type[2xi] in (conv, pool[id]), node_type[2xi + 1] in (1by1, 3by3)
         :param adj_mat: 2d np.array upper triangular with zero diagonal
                         (i,j) entry represents edge from i-node to j-node
         """
+        assert data_type in ['MNIST', 'FashionMNIST', 'CIFAR10']
+        self.data_type = data_type
         super(NASBinaryCNN, self).__init__()
-        self.conv0 = nn.Conv2d(in_channels=3, out_channels=n_ch_base, kernel_size=3, padding=1, bias=True)
+        self.conv0 = nn.Conv2d(in_channels=n_ch_in, out_channels=n_ch_base, kernel_size=3, padding=1, bias=True)
         self.bn0 = nn.BatchNorm2d(num_features=n_ch_base)
         self.relu0 = nn.ReLU()
         self.cell1 = NASBinaryCell(node_type=node_type, adj_mat=adj_mat, n_channels=n_ch_base)
@@ -152,10 +152,13 @@ class NASBinaryCNN(nn.Module):
         self.conv1 = nn.Conv2d(in_channels=n_ch_base, out_channels=n_ch_base * 2, kernel_size=1, bias=True)
         self.cell2 = NASBinaryCell(node_type=node_type, adj_mat=adj_mat, n_channels=n_ch_base * 2)
         self.maxpool2 = nn.MaxPool2d(kernel_size=2)
-        self.conv2 = nn.Conv2d(in_channels=n_ch_base * 2, out_channels=n_ch_base * 4, kernel_size=1, bias=True)
-        self.cell3 = NASBinaryCell(node_type=node_type, adj_mat=adj_mat, n_channels=n_ch_base * 4)
-        self.maxpool3 = nn.MaxPool2d(kernel_size=2)
-        self.fc = nn.Linear(in_features=int(n_ch_base * 4 * (IN_H / 8 * IN_W / 8)), out_features=10)
+        if self.data_type in ['MNIST', 'FashionMNIST']:
+            self.fc = nn.Linear(in_features=int(n_ch_base * 2 * (h_in / 4 * w_in / 4)), out_features=10)
+        elif self.data_type in ['CIFAR10']:
+            self.conv2 = nn.Conv2d(in_channels=n_ch_base * 2, out_channels=n_ch_base * 4, kernel_size=1, bias=True)
+            self.cell3 = NASBinaryCell(node_type=node_type, adj_mat=adj_mat, n_channels=n_ch_base * 4)
+            self.maxpool3 = nn.MaxPool2d(kernel_size=2)
+            self.fc = nn.Linear(in_features=int(n_ch_base * 4 * (h_in / 8 * w_in / 8)), out_features=10)
 
     def init_weights(self):
         nn.init.kaiming_normal_(self.conv0.weight)
@@ -166,17 +169,21 @@ class NASBinaryCNN(nn.Module):
         nn.init.kaiming_normal_(self.conv1.weight)
         nn.init.constant_(self.conv1.bias, 0)
         self.cell2.init_weights()
-        nn.init.kaiming_normal_(self.conv2.weight)
-        nn.init.constant_(self.conv2.bias, 0)
-        self.cell3.init_weights()
+        if self.data_type in ['CIFAR10']:
+            nn.init.kaiming_normal_(self.conv2.weight)
+            nn.init.constant_(self.conv2.bias, 0)
+            self.cell3.init_weights()
         nn.init.kaiming_normal_(self.fc.weight)
         nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x):
         x = self.relu0(self.bn0(self.conv0(x)))
-        x = self.maxpool1(self.conv1(self.cell1(x)))
-        x = self.maxpool2(self.conv2(self.cell2(x)))
-        x = self.maxpool3(self.cell3(x))
+        x = self.conv1(self.maxpool1(self.cell1(x)))
+        if self.data_type in ['MNIST', 'FashionMNIST']:
+            x = self.maxpool2(self.cell2(x))
+        elif self.data_type in ['CIFAR10']:
+            x = self.conv2(self.maxpool2(self.cell2(x)))
+            x = self.maxpool3(self.cell3(x))
         x = self.fc(x.view(x.size(0), -1))
         return x
 

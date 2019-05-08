@@ -21,7 +21,7 @@ from GraphDecompositionBO.experiments.random_seed_config import generate_random_
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import Ising, Contamination
 from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PestControl, Centroid
 from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSAT28, MaxSAT43, MaxSAT60
-from GraphDecompositionBO.experiments.NAS_binary.nas_binary_cifar10 import NASBinaryCIFAR10
+from GraphDecompositionBO.experiments.NAS_binary.nas_binary import NASBinary
 
 
 def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True, **kwargs):
@@ -143,7 +143,6 @@ if __name__ == '__main__':
     parser_.add_argument('--parallel', dest='parallel', action='store_true', default=False)
     parser_.add_argument('--device', dest='device', type=int, default=None)
 
-
     args_ = parser_.parse_args()
     print(args_)
     kwag_ = vars(args_)
@@ -156,9 +155,10 @@ if __name__ == '__main__':
     if args_.device is None:
         del kwag_['device']
     print(kwag_)
-    assert 1 <= int(random_seed_config_) <= 25
+    if random_seed_config_ is not None:
+        assert 1 <= int(random_seed_config_) <= 25
+        random_seed_config_ -= 1
     assert (path_ is None) != (objective_ is None)
-    random_seed_config_ -= 1
 
     if objective_ == 'ising':
         random_seed_pair_ = generate_random_seed_pair_ising()
@@ -188,7 +188,7 @@ if __name__ == '__main__':
         random_seed_ = sorted(generate_random_seed_maxsat())[random_seed_config_]
         kwag_['objective'] = MaxSAT60(random_seed=random_seed_)
     elif objective_ == 'nasbinary':
-        kwag_['objective'] = NASBinaryCIFAR10(device=args_.device)
+        kwag_['objective'] = NASBinary(data_type='FashionMNIST', device=args_.device)
     else:
         raise NotImplementedError
     GOLD(**kwag_)
