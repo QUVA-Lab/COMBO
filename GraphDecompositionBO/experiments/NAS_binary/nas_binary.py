@@ -50,7 +50,7 @@ class NASBinary(object):
 		                                  n_ch_in=self.n_ch_in, h_in=self.h_in, w_in=self.w_in, n_ch_base=self.n_ch_base)
 
 		self.suggested_init = init_architectures()
-		dummy_input = next(most_complex_model.parameters()).data.ones_like(1, self.n_ch_in, self.h_in, self.w_in)
+		dummy_input = next(most_complex_model.parameters()).new_ones(1, self.n_ch_in, self.h_in, self.w_in)
 		self.max_flops = count_ops(most_complex_model, )
 
 		self.adjacency_mat = []
