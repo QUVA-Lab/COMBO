@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import torch
 import torchvision
 
-from GraphDecompositionBO.experiments.NAS_binary.nas_binary_cifar10 import load_cifar10
-from GraphDecompositionBO.experiments.NAS_binary.config_cifar10 import NORM_MEAN, NORM_STD, CIFAR10_CLASSES
+from GraphDecompositionBO.experiments.NAS.nas_binary_cifar10 import load_cifar10
+from GraphDecompositionBO.experiments.NAS.config_cifar10 import NORM_MEAN, NORM_STD, CIFAR10_CLASSES
 
 
 def imshow(img, title_str):

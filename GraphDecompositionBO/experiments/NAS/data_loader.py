@@ -9,16 +9,18 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 from GraphDecompositionBO.config import data_directory
 
-from GraphDecompositionBO.experiments.NAS_binary.data_config import CIFAR10_NORM_MEAN, CIFAR10_NORM_STD
-from GraphDecompositionBO.experiments.NAS_binary.data_config import FashionMNIST_NORM_MEAN, FashionMNIST_NORM_STD
-from GraphDecompositionBO.experiments.NAS_binary.data_config import MNIST_NORM_MEAN, MNIST_NORM_STD
+from GraphDecompositionBO.experiments.NAS.data_config import CIFAR10_NORM_MEAN, CIFAR10_NORM_STD
+from GraphDecompositionBO.experiments.NAS.data_config import FashionMNIST_NORM_MEAN, FashionMNIST_NORM_STD
+from GraphDecompositionBO.experiments.NAS.data_config import MNIST_NORM_MEAN, MNIST_NORM_STD
 
 
-N_VALID = 20000
+N_VALID = 10000
+NUM_WORKERS = 2
+PIN_MEMORY = False
 
 
 def load_cifar10(batch_size, shuffle, random_seed=None):
-	num_workers = 0
+	num_workers = NUM_WORKERS
 	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=CIFAR10_NORM_MEAN, std=CIFAR10_NORM_STD)])
 	data_dir = os.path.join(data_directory(), 'CIFAR10')
 
@@ -32,16 +34,17 @@ def load_cifar10(batch_size, shuffle, random_seed=None):
 	valid_sampler = SubsetRandomSampler(valid_idx)
 
 	train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, sampler=train_sampler,
-	                                           num_workers=num_workers)
+	                                           num_workers=num_workers, pin_memory=PIN_MEMORY)
 	valid_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, sampler=valid_sampler,
-	                                           num_workers=num_workers)
-	test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+	                                           num_workers=num_workers, pin_memory=PIN_MEMORY)
+	test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False,
+	                                          num_workers=num_workers, pin_memory=PIN_MEMORY)
 
 	return train_loader, valid_loader, test_loader
 
 
 def load_fashionmnist(batch_size, shuffle, random_seed=None):
-	num_workers = 0
+	num_workers = NUM_WORKERS
 	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=FashionMNIST_NORM_MEAN, std=FashionMNIST_NORM_STD)])
 	data_dir = os.path.join(data_directory(), 'FashionMNIST')
 
@@ -55,16 +58,17 @@ def load_fashionmnist(batch_size, shuffle, random_seed=None):
 	valid_sampler = SubsetRandomSampler(valid_idx)
 
 	train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, sampler=train_sampler,
-	                                           num_workers=num_workers)
+	                                           num_workers=num_workers, pin_memory=PIN_MEMORY)
 	valid_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, sampler=valid_sampler,
-	                                           num_workers=num_workers)
-	test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+	                                           num_workers=num_workers, pin_memory=PIN_MEMORY)
+	test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False,
+	                                          num_workers=num_workers, pin_memory=PIN_MEMORY)
 
 	return train_loader, valid_loader, test_loader
 
 
 def load_mnist(batch_size, shuffle, random_seed=None):
-	num_workers = 0
+	num_workers = NUM_WORKERS
 	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=MNIST_NORM_MEAN, std=MNIST_NORM_STD)])
 	data_dir = os.path.join(data_directory(), 'MNIST')
 
@@ -78,10 +82,11 @@ def load_mnist(batch_size, shuffle, random_seed=None):
 	valid_sampler = SubsetRandomSampler(valid_idx)
 
 	train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, sampler=train_sampler,
-	                                           num_workers=num_workers)
+	                                           num_workers=num_workers, pin_memory=PIN_MEMORY)
 	valid_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, sampler=valid_sampler,
-	                                           num_workers=num_workers)
-	test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+	                                           num_workers=num_workers, pin_memory=PIN_MEMORY)
+	test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False,
+	                                          num_workers=num_workers, pin_memory=PIN_MEMORY)
 
 	return train_loader, valid_loader, test_loader
 

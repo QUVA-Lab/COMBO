@@ -9,8 +9,8 @@ import torch.optim as optim
 import torch.cuda
 
 
-from GraphDecompositionBO.experiments.NAS_binary.generate_architecture import valid_net_topo, NASBinaryCNN
-from GraphDecompositionBO.experiments.NAS_binary.data_loader import load_cifar10, load_fashionmnist, load_mnist
+from GraphDecompositionBO.experiments.NAS.architecture_generate_binary import valid_net_topo, NASBinaryCNN
+from GraphDecompositionBO.experiments.NAS.data_loader import load_cifar10, load_fashionmnist, load_mnist
 
 
 N_COMPARE = 10
@@ -101,6 +101,7 @@ if __name__ == '__main__':
 	parser_.add_argument('--net_config', dest='net_config', type=str)
 	parser_.add_argument('--n_nodes', dest='n_nodes', type=int)
 	parser_.add_argument('--n_epochs', dest='n_epochs', type=int)
+	parser_.add_argument('--batch_size', dest='batch_size', type=int)
 	parser_.add_argument('--n_ch_in', dest='n_ch_in', type=int)
 	parser_.add_argument('--h_in', dest='h_in', type=int)
 	parser_.add_argument('--w_in', dest='w_in', type=int)
@@ -131,11 +132,11 @@ if __name__ == '__main__':
 		model_ = NASBinaryCNN(data_type_, node_type_, adj_mat_,
 		                      n_ch_in=n_ch_in_, h_in=h_in_, w_in=w_in_, n_ch_base=n_ch_base_)
 		if data_type_ == 'MNIST':
-			train_loader_, valid_loader_, _ = load_mnist(batch_size=100, shuffle=True, random_seed=0)
+			train_loader_, valid_loader_, _ = load_mnist(batch_size=args_.batch_size, shuffle=True, random_seed=0)
 		elif data_type_ == 'FashionMNIST':
-			train_loader_, valid_loader_, _ = load_fashionmnist(batch_size=100, shuffle=True, random_seed=0)
+			train_loader_, valid_loader_, _ = load_fashionmnist(batch_size=args_.batch_size, shuffle=True, random_seed=0)
 		elif data_type_ == 'CIFAR10':
-			train_loader_, valid_loader_, _ = load_cifar10(batch_size=100, shuffle=True, random_seed=0)
+			train_loader_, valid_loader_, _ = load_cifar10(batch_size=args_.batch_size, shuffle=True, random_seed=0)
 		eval_acc_ = train(model_, n_epochs_, train_loader_, valid_loader_, device_, display=False)
 		dummy_input_ = next(model_.parameters()).new_ones(1, n_ch_in_, h_in_, w_in_)
 		flops_ = count_ops(model_, dummy_input_, print_readable=False)

@@ -21,7 +21,7 @@ from GraphDecompositionBO.experiments.random_seed_config import generate_random_
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import Ising, Contamination
 from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PestControl, Centroid
 from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSAT28, MaxSAT43, MaxSAT60
-from GraphDecompositionBO.experiments.NAS_binary.nas_binary import NASBinary
+from GraphDecompositionBO.experiments.NAS.nas_binary import NASBinary
 
 
 def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True, store_data=False, **kwargs):
@@ -50,6 +50,8 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
             objective_id_list.append(objective.random_seed_info)
         if hasattr(objective, 'lamda'):
             objective_id_list.append('%.1E' % objective.lamda)
+        if hasattr(objective, 'data_type'):
+            objective_id_list.append(objective.data_type)
         objective_id_list.append('GOLD' if learn_graph else 'COMBO')
         objective_name = '_'.join(objective_id_list)
         model_filename, data_cfg_filaname, logfile_dir = model_data_filenames(exp_dir=exp_dir,
@@ -188,7 +190,7 @@ if __name__ == '__main__':
         random_seed_ = sorted(generate_random_seed_maxsat())[random_seed_config_]
         kwag_['objective'] = MaxSAT60(random_seed=random_seed_)
     elif objective_ == 'nasbinary':
-        kwag_['objective'] = NASBinary(data_type='FashionMNIST', device=args_.device)
+        kwag_['objective'] = NASBinary(data_type='CIFAR10', device=args_.device)
         kwag_['store_data'] = True
     else:
         raise NotImplementedError

@@ -9,12 +9,12 @@ from pthflops import count_ops
 import torch
 import torch.cuda
 
-from GraphDecompositionBO.experiments.NAS_binary.generate_architecture import NASBinaryCNN
-from GraphDecompositionBO.experiments.NAS_binary.data_config import MNIST_N_CH_IN, MNIST_H_IN, MNIST_W_IN
-from GraphDecompositionBO.experiments.NAS_binary.data_config import FashionMNIST_N_CH_IN, FashionMNIST_H_IN, FashionMNIST_W_IN
-from GraphDecompositionBO.experiments.NAS_binary.data_config import CIFAR10_N_CH_IN, CIFAR10_H_IN, CIFAR10_W_IN
+from GraphDecompositionBO.experiments.NAS.architecture_generate_binary import NASBinaryCNN
+from GraphDecompositionBO.experiments.NAS.data_config import MNIST_N_CH_IN, MNIST_H_IN, MNIST_W_IN
+from GraphDecompositionBO.experiments.NAS.data_config import FashionMNIST_N_CH_IN, FashionMNIST_H_IN, FashionMNIST_W_IN
+from GraphDecompositionBO.experiments.NAS.data_config import CIFAR10_N_CH_IN, CIFAR10_H_IN, CIFAR10_W_IN
 
-from GraphDecompositionBO.experiments.NAS_binary.architectures_in_binary import init_architectures
+from GraphDecompositionBO.experiments.NAS.architecture_in_binary import init_architectures
 
 
 class NASBinary(object):
@@ -24,10 +24,8 @@ class NASBinary(object):
 		self.n_nodes = 7
 		self.n_edges = int(self.n_nodes * (self.n_nodes - 1) / 2)
 		self.n_variables = int(self.n_edges + (self.n_nodes - 2) * 2)
-		self.n_ch_base = 8
-		self.n_epochs = 20
 		self.device = device
-		self.n_repeat = 3
+		self.n_repeat = 4
 		if torch.cuda.is_available():
 			if len(GPUtil.getGPUs()) == 1:
 				self.device = 0
@@ -36,12 +34,19 @@ class NASBinary(object):
 		else:
 			self.device = None
 
+		self.batch_size = 100
 		if self.data_type == 'MNIST':
 			self.n_ch_in, self.h_in, self.w_in = MNIST_N_CH_IN, MNIST_H_IN, MNIST_W_IN
+			self.n_ch_base = 8
+			self.n_epochs = 20
 		elif self.data_type == 'FashionMNIST':
 			self.n_ch_in, self.h_in, self.w_in = FashionMNIST_N_CH_IN, FashionMNIST_H_IN, FashionMNIST_W_IN
+			self.n_ch_base = 8
+			self.n_epochs = 20
 		elif self.data_type == 'CIFAR10':
 			self.n_ch_in, self.h_in, self.w_in = CIFAR10_N_CH_IN, CIFAR10_H_IN, CIFAR10_W_IN
+			self.n_ch_base = 16
+			self.n_epochs = 20
 
 		self.n_vertices = np.array([2] * self.n_variables)
 
@@ -100,6 +105,7 @@ class NASBinary(object):
 		cmd_list += ['--net_config', ''.join([str(int(x[i].item())) for i in range(self.n_variables)])]
 		cmd_list += ['--n_nodes', str(self.n_nodes)]
 		cmd_list += ['--n_epochs', str(self.n_epochs)]
+		cmd_list += ['--batch_size', str(self.batch_size)]
 		cmd_list += ['--n_ch_in', str(self.n_ch_in)]
 		cmd_list += ['--h_in', str(self.h_in)]
 		cmd_list += ['--w_in', str(self.w_in)]
@@ -113,8 +119,8 @@ class NASBinary(object):
 
 
 if __name__ == '__main__':
-	nas_binary_ = NASBinary(data_type='FashionMNIST', device=int(sys.argv[1]))
-	x_ = torch.randint(1, 2, (nas_binary_.n_variables,))
+	nas_binary_ = NASBinary(data_type='CIFAR10', device=int(sys.argv[1]))
+	x_ = torch.randint(0, 2, (nas_binary_.n_variables,))
 	eval_list_ = []
 	for _ in range(1):
 		eval_list_.append(nas_binary_.evaluate(x_).item())
