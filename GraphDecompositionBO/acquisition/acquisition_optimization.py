@@ -85,7 +85,7 @@ def next_evaluation(x_opt, inference_samples, partition_samples, edge_mat_sample
         ga_return_values = [greedy_ascent(*(ga_args_list[i])) for i in range(n_inits)]
     ga_opt_vrt, ga_opt_acq = zip(*ga_return_values)
     sys.stdout.write('and took %s\n' % time.strftime('%H:%M:%S', time.gmtime(time.time() - ga_start_time)))
-    print('  '.join(['%4.2f' % ga_opt_acq[i] for i in range(n_inits)]))
+    print('  '.join(['%.3E' % ga_opt_acq[i] for i in range(n_inits)]))
 
     opt_vrt = list(ga_opt_vrt[:])
     opt_acq = list(ga_opt_acq[:])

@@ -10,7 +10,7 @@ def init_architectures():
 
 	# 1
 	# line graph
-	# Conv3, Id, Id, Id, Id
+	# Conv5, Id, Id, Id, Id
 	node_type = torch.LongTensor([1, 1, 0, 0, 0, 0, 0, 0, 0, 0])
 	outbounds = [torch.LongTensor([1, 0, 0, 0, 0, 0]),
 	             torch.LongTensor([   1, 0, 0, 0, 0]),
@@ -22,7 +22,7 @@ def init_architectures():
 
 	# 2
 	# line graph
-	# Conv3, Conv3, Conv3, Conv3, Conv3
+	# Conv5, Conv5, Conv5, Conv5, Conv5
 	node_type = torch.LongTensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 	outbounds = [torch.LongTensor([1, 0, 0, 0, 0, 0]),
 	             torch.LongTensor([   1, 0, 0, 0, 0]),
@@ -34,7 +34,7 @@ def init_architectures():
 
 	# 3
 	# id + line graph
-	# Id, Conv3, Conv3, Conv3, Conv3
+	# Id, Conv5, Conv5, Conv5, Conv5
 	node_type = torch.LongTensor([0, 0, 1, 1, 1, 1, 1, 1, 1, 1])
 	outbounds = [torch.LongTensor([1, 0, 0, 0, 0, 1]),
 	             torch.LongTensor([   1, 0, 0, 0, 0]),
@@ -46,7 +46,7 @@ def init_architectures():
 
 	# 4
 	# id + line graph
-	# Id, Conv3, MaxPool3, Conv3, MaxPool3
+	# Id, Conv5, MaxPool3, Conv5, MaxPool3
 	node_type = torch.LongTensor([0, 0, 1, 1, 0, 1, 1, 1, 0, 1])
 	outbounds = [torch.LongTensor([1, 0, 0, 0, 0, 1]),
 	             torch.LongTensor([   1, 0, 0, 0, 0]),
@@ -58,7 +58,7 @@ def init_architectures():
 
 	# 5
 	# id + 2 paths
-	# Id, Conv3, Conv3, Conv3, Conv3
+	# Id, Conv5, Conv5, Conv5, Conv5
 	node_type = torch.LongTensor([0, 0, 1, 1, 1, 1, 1, 1, 1, 1])
 	outbounds = [torch.LongTensor([1, 1, 1, 0, 0, 0]),
 	             torch.LongTensor([   0, 0, 0, 0, 1]),
@@ -70,7 +70,7 @@ def init_architectures():
 
 	# 6
 	# id + 2 paths
-	# Id, Conv3, MaxPool3, Conv3, MaxPool3
+	# Id, Conv5, MaxPool3, Conv5, MaxPool3
 	node_type = torch.LongTensor([0, 0, 1, 1, 0, 1, 1, 1, 0, 1])
 	outbounds = [torch.LongTensor([1, 1, 1, 0, 0, 0]),
 	             torch.LongTensor([   0, 0, 0, 0, 1]),
@@ -82,7 +82,7 @@ def init_architectures():
 
 	# 7
 	# conv + 2 path
-	# Conv3, Conv3, Conv3, Conv3, Conv3
+	# Conv5, Conv5, Conv5, Conv5, Conv5
 	node_type = torch.LongTensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 	outbounds = [torch.LongTensor([1, 1, 1, 0, 0, 0]),
 	             torch.LongTensor([   0, 0, 0, 0, 1]),
@@ -94,7 +94,7 @@ def init_architectures():
 
 	# 8
 	# conv + 2 paths
-	# Conv3, Conv3, MaxPool3, Conv3, MaxPool3
+	# Conv5, Conv5, MaxPool3, Conv5, MaxPool3
 	node_type = torch.LongTensor([1, 1, 1, 1, 0, 1, 1, 1, 0, 1])
 	outbounds = [torch.LongTensor([1, 1, 1, 0, 0, 0]),
 	             torch.LongTensor([   0, 0, 0, 0, 1]),
@@ -106,7 +106,7 @@ def init_architectures():
 
 	# 9
 	# complete graph
-	# Conv3, Conv3, Conv3, Conv3, Conv3
+	# Conv5, Conv5, Conv5, Conv5, Conv5
 	node_type = torch.LongTensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 	outbounds = [torch.LongTensor([1, 1, 1, 1, 1, 1]),
 	             torch.LongTensor([   1, 1, 1, 1, 1]),
@@ -118,7 +118,7 @@ def init_architectures():
 
 	# 10
 	# complete graph
-	# Conv3, MaxPool3, Conv3, MaxPool3, Conv3
+	# Conv5, MaxPool3, Conv5, MaxPool3, Conv5
 	node_type = torch.LongTensor([1, 1, 0, 1, 1, 1, 0, 1, 1, 1])
 	outbounds = [torch.LongTensor([1, 1, 1, 1, 1, 1]),
 	             torch.LongTensor([   1, 1, 1, 1, 1]),
