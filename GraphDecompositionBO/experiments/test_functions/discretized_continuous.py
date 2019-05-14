@@ -19,7 +19,7 @@ class Branin(object):
 		for i in range(len(self.n_vertices)):
 			n_v = self.n_vertices[i]
 			adjmat = torch.diag(torch.ones(n_v - 1), -1) + torch.diag(torch.ones(n_v - 1), 1)
-			# adjmat *= (n_v - 1.0)
+			adjmat *= (n_v - 1.0)
 			self.adjacency_mat.append(adjmat)
 			degmat = torch.sum(adjmat, dim=0)
 			laplacian = (torch.diag(degmat) - adjmat)
@@ -76,7 +76,7 @@ class Hartmann6(object):
 		for i in range(len(self.n_vertices)):
 			n_v = self.n_vertices[i]
 			adjmat = torch.diag(torch.ones(n_v - 1), -1) + torch.diag(torch.ones(n_v - 1), 1)
-			# adjmat *= (n_v - 1.0)
+			adjmat *= (n_v - 1.0)
 			self.adjacency_mat.append(adjmat)
 			wgtsum = torch.sum(adjmat, dim=0)
 			laplacian = (torch.diag(wgtsum) - adjmat)
