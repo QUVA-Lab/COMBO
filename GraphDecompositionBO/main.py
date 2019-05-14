@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
     if objective_ == 'branin':
         kwag_['objective'] = Branin()
-    if objective_ == 'hartmann6':
+    elif objective_ == 'hartmann6':
         kwag_['objective'] = Hartmann6()
     elif objective_ == 'ising':
         random_seed_pair_ = generate_random_seed_pair_ising()
