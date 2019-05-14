@@ -111,7 +111,7 @@ def GOLD(objective=None, n_eval=200, path=None, parallel=False, learn_graph=True
         inference_samples = inference_sampling(eval_inputs, eval_outputs, n_vertices,
                                                hyper_samples, log_beta_samples, partition_samples,
                                                freq_samples, basis_samples)
-        suggestion = next_evaluation(x_opt, inference_samples, partition_samples, edge_mat_samples,
+        suggestion = next_evaluation(x_opt, eval_inputs, inference_samples, partition_samples, edge_mat_samples,
                                      n_vertices, acquisition_func, reference, parallel)
         next_eval, pred_mean, pred_std, pred_var = suggestion
 

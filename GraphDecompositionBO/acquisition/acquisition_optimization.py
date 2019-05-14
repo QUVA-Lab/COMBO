@@ -13,6 +13,8 @@ from GraphDecompositionBO.acquisition.acquisition_optimizers.greedy_ascent impor
 from GraphDecompositionBO.acquisition.acquisition_optimizers.simulated_annealing import simulated_annealing
 from GraphDecompositionBO.acquisition.acquisition_functions import expected_improvement
 from GraphDecompositionBO.acquisition.acquisition_marginalization import prediction_statistic
+from GraphDecompositionBO.acquisition.acquisition_optimizers.graph_utils import neighbors
+
 
 MAX_N_ASCENT = float('inf')
 N_CPU = os.cpu_count()
@@ -20,7 +22,7 @@ N_AVAILABLE_CORE = min(10, N_CPU)
 N_SA_RUN = 10
 
 
-def next_evaluation(x_opt, inference_samples, partition_samples, edge_mat_samples, n_vertices,
+def next_evaluation(x_opt, input_data, inference_samples, partition_samples, edge_mat_samples, n_vertices,
                     acquisition_func=expected_improvement, reference=None, parallel=None):
     """
     In case of '[Errno 24] Too many open files', check 'nofile' limit by typing 'ulimit -n' in a terminal
@@ -29,6 +31,7 @@ def next_evaluation(x_opt, inference_samples, partition_samples, edge_mat_sample
         *               soft    nofile          [Large Number e.g 65536]
     Rebooting may be needed.
     :param x_opt: 1D Tensor
+    :param input_data:
     :param inference_samples:
     :param partition_samples:
     :param edge_mat_samples:
@@ -127,14 +130,30 @@ def next_evaluation(x_opt, inference_samples, partition_samples, edge_mat_sample
     # opt_vrt = opt_vrt + list(sa_opt_vrt[:])
     # opt_acq = opt_acq + list(sa_opt_acq[:])
 
-    acq_max_inds = np.where(np.max(opt_acq) == np.array(opt_acq))[0]
-    acq_max_ind = acq_max_inds[np.random.randint(0, acq_max_inds.size)]
-    suggestion = opt_vrt[acq_max_ind]
-
     end_time = time.time()
     elapsed_time = end_time - start_time
     print('(%s) Acquisition function optimization ended %s'
           % (time.strftime('%H:%M:%S', time.gmtime(end_time)), time.strftime('%H:%M:%S', time.gmtime(elapsed_time))))
+
+    acq_sort_inds = np.argsort(-np.array(opt_acq))
+    suggestion = None
+    for i in range(len(opt_vrt)):
+        ind = acq_sort_inds[i]
+        if not torch.all(opt_vrt[ind] == input_data, dim=1).any():
+            suggestion = opt_vrt[ind]
+            break
+    if suggestion is None:
+        for i in range(len(opt_vrt)):
+            ind = acq_sort_inds[i]
+            nbds = neighbors(opt_vrt[ind], partition_samples, edge_mat_samples, n_vertices, uniquely=True)
+            for j in range(nbds.size(0)):
+                if not torch.all(nbds[j] == input_data, dim=1).any():
+                    suggestion = nbds[j]
+                    break
+            if suggestion is not None:
+                break
+    if suggestion is None:
+        suggestion = torch.cat(tuple([torch.randint(low=0, high=int(n_v), size=(1, 1)) for n_v in n_vertices]), dim=1).long()
 
     mean, std, var = prediction_statistic(suggestion, inference_samples, partition_samples, n_vertices)
     return suggestion, mean, std, var
