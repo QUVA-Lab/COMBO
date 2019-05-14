@@ -18,6 +18,7 @@ from GraphDecompositionBO.utils import model_data_filenames, load_model_data, di
 from GraphDecompositionBO.experiments.random_seed_config import generate_random_seed_pair_ising, \
     generate_random_seed_pair_contamination, generate_random_seed_pestcontrol, generate_random_seed_pair_centroid, \
     generate_random_seed_maxsat
+from GraphDecompositionBO.experiments.test_functions.discretized_continuous import Branin, Hartmann6
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import Ising, Contamination
 from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PestControl, Centroid
 from GraphDecompositionBO.experiments.MaxSAT.maximum_satisfiability import MaxSAT28, MaxSAT43, MaxSAT60
@@ -162,7 +163,11 @@ if __name__ == '__main__':
         random_seed_config_ -= 1
     assert (path_ is None) != (objective_ is None)
 
-    if objective_ == 'ising':
+    if objective_ == 'branin':
+        kwag_['objective'] = Branin()
+    if objective_ == 'hartmann6':
+        kwag_['objective'] = Hartmann6()
+    elif objective_ == 'ising':
         random_seed_pair_ = generate_random_seed_pair_ising()
         case_seed_ = sorted(random_seed_pair_.keys())[int(random_seed_config_ / 5)]
         init_seed_ = sorted(random_seed_pair_[case_seed_])[int(random_seed_config_ % 5)]
