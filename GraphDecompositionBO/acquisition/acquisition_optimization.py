@@ -135,6 +135,7 @@ def next_evaluation(x_opt, input_data, inference_samples, partition_samples, edg
     print('(%s) Acquisition function optimization ended %s'
           % (time.strftime('%H:%M:%S', time.gmtime(end_time)), time.strftime('%H:%M:%S', time.gmtime(elapsed_time))))
 
+    # argsort sorts in ascending order so it is negated to have descending order
     acq_sort_inds = np.argsort(-np.array(opt_acq))
     suggestion = None
     for i in range(len(opt_vrt)):

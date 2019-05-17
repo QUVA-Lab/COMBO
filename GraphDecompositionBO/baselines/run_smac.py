@@ -18,6 +18,7 @@ import torch
 from GraphDecompositionBO.experiments.random_seed_config import generate_random_seed_pestcontrol, \
 	generate_random_seed_pair_centroid, generate_random_seed_maxsat, generate_random_seed_pair_ising, \
 	generate_random_seed_pair_contamination
+from GraphDecompositionBO.experiments.test_functions.discretized_continuous import Branin
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import ISING_N_EDGES, CONTAMINATION_N_STAGES
 from GraphDecompositionBO.experiments.test_functions.binary_categorical import Ising, Contamination
 from GraphDecompositionBO.experiments.test_functions.multiple_categorical import PESTCONTROL_N_STAGES, CENTROID_GRID, \
@@ -190,6 +191,34 @@ def centroid(n_eval, random_seed_pair):
 	return optimum
 
 
+def branin(n_eval):
+	evaluator = Branin()
+	name_tag = '_'.join(['branin',  datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")])
+	cs = ConfigurationSpace()
+	for i in range(len(evaluator.n_vertices)):
+		car_var = UniformIntegerHyperparameter('x' + str(i + 1).zfill(2), 0, int(evaluator.n_vertices[i]) - 1, default_value=25)
+		cs.add_hyperparameter(car_var)
+
+	init_points_numpy = evaluator.suggested_init.long().numpy()
+	init_points = []
+	for i in range(init_points_numpy.shape[0]):
+		init_points.append(Configuration(cs, {'x' + str(j + 1).zfill(2): int(init_points_numpy[i][j]) for j in range(len(evaluator.n_vertices))}))
+
+	def evaluate(x):
+		x_tensor = torch.LongTensor([int(x['x' + str(j + 1).zfill(2)]) for j in range(len(evaluator.n_vertices))])
+		return evaluator.evaluate(x_tensor).item()
+
+	print('Began    at ' + datetime.now().strftime("%H:%M:%S"))
+	scenario = Scenario({"run_obj": "quality", "runcount-limit": n_eval, "cs": cs, "deterministic": "true",
+	                     'output_dir': os.path.join(EXP_DIR, name_tag)})
+	smac = SMAC(scenario=scenario, tae_runner=evaluate, initial_configurations=init_points)
+	smac.optimize()
+
+	evaluations, optimum = evaluations_from_smac(smac)
+	print('Finished at ' + datetime.now().strftime("%H:%M:%S"))
+	return optimum
+
+
 def multiple_runs(problem):
 	print('Optimizing %s' % problem)
 	if problem[:5] == 'ising':
@@ -272,6 +301,21 @@ def multiple_runs(problem):
 		for i in range(n_runs):
 			init_seed = random_seeds[i]
 			optimum = maxsat(n_eval, n_variables, init_seed)
+			bar_cnt += 1
+			bar.update(bar_cnt)
+			if runs is None:
+				runs = optimum.reshape(-1, 1)
+			else:
+				runs = np.hstack([runs, optimum.reshape(-1, 1)])
+	elif problem == 'branin':
+		n_eval = 100
+		runs = None
+		n_runs = 25
+
+		bar = progressbar.ProgressBar(max_value=n_runs)
+		bar_cnt = 0
+		for i in range(n_runs):
+			optimum = branin(n_eval)
 			bar_cnt += 1
 			bar.update(bar_cnt)
 			if runs is None:
