@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import numpy as np
 import pickle
 from datetime import datetime
@@ -35,8 +36,7 @@ RESULT_DIR = SMAC_exp_dir()
 
 
 def ising(n_eval, lamda, random_seed_pair):
-	evaluator = Ising(random_seed_pair)
-	evaluator.lamda = lamda
+	evaluator = Ising(lamda, random_seed_pair)
 	name_tag = '_'.join(['ising',  ('%.2E' % lamda), datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")])
 	cs = ConfigurationSpace()
 	for i in range(ISING_N_EDGES):
@@ -222,7 +222,7 @@ def branin(n_eval):
 def multiple_runs(problem):
 	print('Optimizing %s' % problem)
 	if problem[:5] == 'ising':
-		n_eval = 170
+		n_eval = 22
 		lamda = float(problem.split('_')[1])
 		random_seed_pairs = generate_random_seed_pair_ising()
 		runs = None
@@ -295,18 +295,23 @@ def multiple_runs(problem):
 		random_seeds = sorted(generate_random_seed_maxsat())
 		runs = None
 		n_runs = 10
-
+		begin_time_list = []
+		end_time_list = []
 		bar = progressbar.ProgressBar(max_value=n_runs)
 		bar_cnt = 0
 		for i in range(n_runs):
 			init_seed = random_seeds[i]
+			begin_time_list.append(time.time())
 			optimum = maxsat(n_eval, n_variables, init_seed)
+			end_time_list.append(time.time())
 			bar_cnt += 1
 			bar.update(bar_cnt)
 			if runs is None:
 				runs = optimum.reshape(-1, 1)
 			else:
 				runs = np.hstack([runs, optimum.reshape(-1, 1)])
+		elapsed_time_list = [end_time - begin_time for begin_time, end_time in zip(begin_time_list, end_time_list)]
+		print(np.mean(elapsed_time_list), np.std(elapsed_time_list))
 	elif problem == 'branin':
 		n_eval = 100
 		runs = None
