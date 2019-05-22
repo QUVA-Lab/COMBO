@@ -222,7 +222,7 @@ def branin(n_eval):
 def multiple_runs(problem):
 	print('Optimizing %s' % problem)
 	if problem[:5] == 'ising':
-		n_eval = 22
+		n_eval = 270
 		lamda = float(problem.split('_')[1])
 		random_seed_pairs = generate_random_seed_pair_ising()
 		runs = None
