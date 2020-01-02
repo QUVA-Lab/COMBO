@@ -38,7 +38,7 @@ def univariate_slice_sampling(logp, x0, width=1.0, max_steps_out=10):
             try:
                 logp_upper = llh_record[float(upper)]
             except KeyError:
-                logp_upper = logp(lower)
+                logp_upper = logp(upper)
                 llh_record[float(upper)] = logp_upper
 
         # Shrinkage
