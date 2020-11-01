@@ -16,6 +16,8 @@ def experiment_directory():
 		return '/var/scratch/coh/Experiments/COMBO'
 	elif hostname[:3] == 'vpn':
 		return '/Users/changyongoh/Experiments/COMBO'
+	elif hostname == 'ChangYongs-MacBook-Pro.local':
+		return '/Users/changyongoh/Experiments/COMBO'
 	else:
 		raise ValueError('Set proper experiment directory on your machine.')
 
@@ -30,6 +32,8 @@ def data_directory():
 		return '/home/cyoh/Data'
 	elif hostname[:4] == 'node':
 		return '/var/scratch/coh/Data'
+	elif hostname == 'ChangYongs-MacBook-Pro.local':
+		return '/Users/changyongoh/Data'
 	else:
 		raise ValueError('Set proper experiment directory on your machine.')
 

@@ -39,7 +39,7 @@ def _cartesian_neighbors(grouped_x, edge_mat_list):
     """
     neighbor_list = []
     for i in range(len(edge_mat_list)):
-        nbd_i_elm = edge_mat_list[i][grouped_x[i]].nonzero().squeeze(1)
+        nbd_i_elm = edge_mat_list[i][grouped_x[i]].nonzero(as_tuple=False).squeeze(1)
         nbd_i = grouped_x.repeat((nbd_i_elm.numel(), 1))
         nbd_i[:, i] = nbd_i_elm
         neighbor_list.append(nbd_i)
